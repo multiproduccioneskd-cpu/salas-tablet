@@ -13,7 +13,6 @@
         }
 
         body {
-            /* Usamos la imagen corporativa como fondo de pantalla de forma limpia */
             background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
             background-size: cover;
             background-position: center;
@@ -97,8 +96,8 @@
             transform: translateY(-2px);
         }
 
-        /* Variación de color superior para destacar el Directorio */
-        .room-card.directorio {
+        /* Variación para destacar visualmente el Directorio */
+        .room-card.directorio-style {
             border-top: 5px solid #dda126;
         }
 
@@ -117,7 +116,7 @@
             color: #1b2a4a;
         }
 
-        .room-card.directorio .room-name {
+        .room-card.directorio-style .room-name {
             color: #b8820a;
         }
 
@@ -130,7 +129,7 @@
             font-weight: bold;
         }
 
-        .room-card.directorio .event-count {
+        .room-card.directorio-style .event-count {
             background: #dda126;
         }
 
@@ -224,7 +223,6 @@
 </head>
 <body>
 
-    <!-- Encabezado Principal -->
     <div class="main-header">
         <div class="header-left">
             <div class="title">Control de Agenda Diaria de Salas</div>
@@ -233,109 +231,8 @@
         <div class="date-badge" id="liveDate"></div>
     </div>
 
-    <!-- Grid con las 4 salas en paralelo para ver todo el día de un vistazo -->
-    <div class="rooms-grid">
-        
-        <!-- Sala de Directorio -->
-        <div class="room-card directorio">
-            <div class="room-title-bar">
-                <span class="room-name">Sala de Directorio</span>
-                <span class="event-count">3 Reuniones</span>
-            </div>
-            <div class="meetings-list">
-                <div class="meeting-item">
-                    <div class="meeting-time">
-                        <span class="time-box">09:00 - 11:00</span>
-                    </div>
-                    <div class="meeting-details">
-                        <div class="meeting-title">Sesión Ordinaria de Directorio UGM</div>
-                        <div class="meeting-info">Organiza: Secretaría General</div>
-                    </div>
-                </div>
-                <div class="meeting-item">
-                    <div class="meeting-time">
-                        <span class="time-box">11:30 - 13:00</span>
-                    </div>
-                    <div class="meeting-details">
-                        <div class="meeting-title">Comité de Aseguramiento de la Calidad</div>
-                        <div class="meeting-info">Organiza: Dirección de Calidad</div>
-                    </div>
-                </div>
-                <div class="meeting-item">
-                    <div class="meeting-time">
-                        <span class="time-box">15:00 - 16:30</span>
-                    </div>
-                    <div class="meeting-details">
-                        <div class="meeting-title">Revisión Estratégica Institucional</div>
-                        <div class="meeting-info">Organiza: Rectoría</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="rooms-grid" id="roomsContainer"></div>
 
-        <!-- Sala de Reuniones 2 -->
-        <div class="room-card">
-            <div class="room-title-bar">
-                <span class="room-name">Sala de Reuniones 2</span>
-                <span class="event-count">2 Reuniones</span>
-            </div>
-            <div class="meetings-list">
-                <div class="meeting-item">
-                    <div class="meeting-time">
-                        <span class="time-box">10:00 - 11:30</span>
-                    </div>
-                    <div class="meeting-details">
-                        <div class="meeting-title">Coordinación Matrículas y Admisión</div>
-                        <div class="meeting-info">Organiza: Equipo de Difusión</div>
-                    </div>
-                </div>
-                <div class="meeting-item">
-                    <div class="meeting-time">
-                        <span class="time-box">14:30 - 16:00</span>
-                    </div>
-                    <div class="meeting-details">
-                        <div class="meeting-title">Planificación Encuentro Alumni UGM</div>
-                        <div class="meeting-info">Organiza: Dirección de Vinculación</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sala de Reuniones 3 -->
-        <div class="room-card">
-            <div class="room-title-bar">
-                <span class="room-name">Sala de Reuniones 3</span>
-                <span class="event-count">Disponible</span>
-            </div>
-            <div class="meetings-list">
-                <div class="no-meetings">
-                    No hay reuniones programadas para hoy en esta sala.
-                </div>
-            </div>
-        </div>
-
-        <!-- Sala de Reuniones 4 -->
-        <div class="room-card">
-            <div class="room-title-bar">
-                <span class="room-name">Sala de Reuniones 4</span>
-                <span class="event-count">1 Reunión</span>
-            </div>
-            <div class="meetings-list">
-                <div class="meeting-item">
-                    <div class="meeting-time">
-                        <span class="time-box">16:00 - 17:30</span>
-                    </div>
-                    <div class="meeting-details">
-                        <div class="meeting-title">Alineación Plataformas TI y Virtuales</div>
-                        <div class="meeting-info">Organiza: Soporte Técnico</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Footer Institucional -->
     <div>
         <div class="brand-bar">
             <div class="color-1"></div>
@@ -348,17 +245,119 @@
     </div>
 
     <script>
+        // =========================================================================
+        // CONFIGURACIÓN DE CONEXIÓN A LAS SALAS (MAPEO DE CORREOS / GUID DE OUTLOOK)
+        // =========================================================================
+        // Cuando tengas la API real, cambiarás el "displayName" y los datos de la "agenda"
+        // dinámicamente con la respuesta JSON que te entregue Microsoft Graph.
+        const salasUGM = [
+            {
+                id: "3162F1E1-C4C0-604B-51D8-91DA78970B97", // Ejemplo de GUID o correo de recurso
+                resourceEmail: "sala.directorio@ugm.cl",
+                displayName: "Sala de Directorio",       // Nombre dinámico en pantalla
+                isDirectorio: true,                        // Activa el color dorado decorativo
+                agenda: [
+                    { title: "Sesión Ordinaria de Directorio UGM", org: "Secretaría General", time: "09:00 - 11:00" },
+                    { title: "Comité de Aseguramiento de la Calidad", org: "Dirección de Calidad", time: "11:30 - 13:00" },
+                    { title: "Revisión Estratégica Institucional", org: "Rectoría", time: "15:00 - 16:30" }
+                ]
+            },
+            {
+                id: "A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D",
+                resourceEmail: "sala.reuniones2@ugm.cl",
+                displayName: "Sala de Reuniones 2",
+                isDirectorio: false,
+                agenda: [
+                    { title: "Coordinación Matrículas y Admisión", org: "Equipo de Difusión", time: "10:00 - 11:30" },
+                    { title: "Planificación Encuentro Alumni UGM", org: "Dirección de Vinculación", time: "14:30 - 16:00" }
+                ]
+            },
+            {
+                id: "F6E5D4C3-B2A1-0F9E-8D7C-6B5A4M3N2P1Q",
+                resourceEmail: "sala.reuniones3@ugm.cl",
+                displayName: "Sala de Reuniones 3",
+                isDirectorio: false,
+                agenda: [] // Lista vacía para simular estado disponible
+            },
+            {
+                id: "78912345-6789-abcd-ef01-234567890abc",
+                resourceEmail: "sala.reuniones4@ugm.cl",
+                displayName: "Sala de Reuniones 4",
+                isDirectorio: false,
+                agenda: [
+                    { title: "Alineación Plataformas TI y Virtuales", org: "Soporte Técnico", time: "16:00 - 17:30" }
+                ]
+            }
+        ];
+
+        // Función encargada de renderizar la grilla completa en base al arreglo de salas
+        function renderDashboard() {
+            const container = document.getElementById('roomsContainer');
+            let gridHTML = "";
+
+            salasUGM.forEach(sala => {
+                // Determinar clases de estilo y contadores según la data
+                const cardClass = sala.isDirectorio ? "room-card directorio-style" : "room-card";
+                const totalReuniones = sala.agenda.length;
+                const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
+
+                // Construcción de la cabecera de la casilla con el nombre dinámico de la sala
+                gridHTML += `
+                    <div class="${cardClass}">
+                        <div class="room-title-bar">
+                            <span class="room-name">${sala.displayName}</span>
+                            <span class="event-count">${countText}</span>
+                        </div>
+                        <div class="meetings-list">
+                `;
+
+                // Construcción de la lista de reuniones interna
+                if (totalReuniones === 0) {
+                    gridHTML += `
+                        <div class="no-meetings">
+                            No hay reuniones programadas para hoy en esta sala.
+                        </div>
+                    `;
+                } else {
+                    sala.agenda.forEach(meet => {
+                        gridHTML += `
+                            <div class="meeting-item">
+                                <div class="meeting-time">
+                                    <span class="time-box">${meet.time}</span>
+                                </div>
+                                <div class="meeting-details">
+                                    <div class="meeting-title">${meet.title}</div>
+                                    <div class="meeting-info">Organiza: ${meet.org}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Cierre de etiquetas de la tarjeta
+                gridHTML += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Inyectar todo el HTML estructurado dentro del contenedor común
+            container.innerHTML = gridHTML;
+        }
+
         // Función para inyectar la fecha del día actual automáticamente en el header
         function updateDate() {
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const today = new Date();
             let dateStr = today.toLocaleDateString('es-CL', options);
-            // Capitalizar primera letra
             dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
             document.getElementById('liveDate').innerText = dateStr;
         }
         
-        window.onload = updateDate;
+        window.onload = function() {
+            updateDate();
+            renderDashboard(); // Dibuja las salas dinámicamente al cargar
+        };
     </script>
 </body>
 </html>
