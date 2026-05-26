@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sala de Reuniones - Tablet Display</title>
+    <title>Sala 1 - Universidad Gabriela Mistral</title>
     <style>
         :root {
-            --ugm-azul: #1B2A4A;
-            --ugm-celeste: #52B3E5;
-            --ugm-dorado: #DDA126;
-            --bg-glass: rgba(0, 0, 0, 0.65);
-            --text-main: #ffffff;
+            --ugm-azul: #1B2A4A;       /* Azul Institucional */
+            --ugm-celeste: #52B3E5;    /* Celeste Complementario */
+            --ugm-dorado: #DDA126;     /* Dorado/Amarillo UGM */
+            --text-white: #ffffff;
         }
 
         * {
@@ -21,16 +20,17 @@
         }
 
         body {
-            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
+            /* Mantiene la imagen de fondo de pantalla Alumni fija */
+            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            background-color: #000;
+            background-color: #0d121f;
             height: 100vh;
             width: 100vw;
             display: flex;
             overflow: hidden;
-            color: var(--text-main);
+            color: var(--text-white);
         }
 
         /* --- Panel Principal Izquierdo --- */
@@ -40,93 +40,92 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
+            position: relative;
+            /* Capa oscura translúcida para legibilidad perfecta sobre la foto */
+            background: linear-gradient(to right, rgba(27, 42, 74, 0.9) 0%, rgba(27, 42, 74, 0.4) 100%);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
-        .header-info {
+        .header-clock {
             position: absolute;
             top: 40px;
             left: 70px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .current-date {
             font-size: 24px;
             font-weight: 300;
-            letter-spacing: 1px;
             color: var(--ugm-celeste);
+            letter-spacing: 1px;
         }
 
-        /* Área de Logo Ampliada sin Círculo */
-        .logo-container {
+        /* Contenedor exclusivo para el Logo_ugm.png (Más grande y sin círculos) */
+        .logo-top-right {
             position: absolute;
-            top: 20px;
-            right: 20px; /* Ajustado para que no interfiera con el texto */
+            top: 30px;
+            right: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .logo-image {
-            width: 150px; /* Tamaño mucho más grande */
+        .logo-top-right img {
+            width: 190px; /* Tamaño ampliado e imponente */
             height: auto;
-            object-fit: contain; /* Asegura que no se deforme */
+            object-fit: contain;
         }
 
-        /* Evento Actual */
-        .current-event-container {
+        /* Evento en Curso */
+        .current-event-box {
             margin-bottom: 60px;
+            margin-top: 40px;
         }
 
         .label {
             text-transform: uppercase;
             font-size: 14px;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             color: var(--ugm-dorado);
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             display: block;
             font-weight: bold;
         }
 
-        .current-time {
-            font-size: 80px;
+        .current-time-range {
+            font-size: 85px;
             font-weight: 700;
             line-height: 1;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            letter-spacing: -2px;
         }
 
-        .current-title {
-            font-size: 38px;
+        .current-meeting-title {
+            font-size: 42px;
             font-weight: 400;
             max-width: 800px;
-            color: #fff;
+            line-height: 1.2;
         }
 
-        .status-indicator {
+        .status-badge {
             display: inline-block;
-            padding: 5px 15px;
+            margin-top: 20px;
+            padding: 8px 22px;
             border-radius: 4px;
             font-size: 14px;
             font-weight: bold;
-            margin-top: 15px;
-            background: #e53e3e; /* Rojo por defecto */
+            letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-        .status-available {
-            background: #38a169; /* Verde (Disponible) */
-        }
+        .status-occupied { background: #cd3d3d; }
+        .status-available { background: #2f9e5f; }
 
-        /* Próximos Eventos */
-        .next-events-container {
+        /* Próximas Reuniones */
+        .next-events {
             border-top: 1px solid rgba(255,255,255,0.2);
-            padding-top: 30px;
-            max-width: 600px;
+            padding-top: 35px;
+            max-width: 750px;
         }
 
-        .next-event-item {
+        .next-item {
             display: flex;
             margin-bottom: 25px;
             align-items: flex-start;
@@ -134,23 +133,24 @@
 
         .next-time {
             min-width: 180px;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: var(--ugm-celeste);
         }
 
-        .next-details .next-title {
-            font-size: 20px;
+        .next-title {
+            font-size: 22px;
             font-weight: 500;
-            margin-bottom: 4px;
+            color: #ffffff;
         }
 
-        .next-details .next-org {
+        .next-org {
             font-size: 14px;
-            color: rgba(255,255,255,0.6);
+            color: rgba(255,255,255,0.55);
+            margin-top: 2px;
         }
 
-        /* --- Panel Lateral Derecho --- */
+        /* --- Panel Lateral Derecho (Sidebar Institucional) --- */
         .sidebar {
             width: 320px;
             background-color: var(--ugm-azul);
@@ -159,162 +159,149 @@
             align-items: center;
             justify-content: space-between;
             padding: 60px 20px;
-            border-left: 8px solid var(--ugm-dorado);
-            position: relative;
+            border-left: 8px solid var(--ugm-dorado); /* Línea dorada UGM */
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
         }
 
-        .room-id {
+        .room-info {
             text-align: center;
+            margin-top: 20px;
         }
 
-        .room-number {
-            font-size: 24px;
+        .room-label {
+            font-size: 22px;
             color: var(--ugm-dorado);
             font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 5px;
+            letter-spacing: 3px;
+            margin-bottom: 12px;
         }
 
         .room-name {
             font-size: 32px;
-            font-weight: 700;
-            line-height: 1.1;
+            font-weight: 800;
+            line-height: 1.2;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .sidebar-icons {
-            display: flex;
-            flex-direction: column;
-            gap: 40px;
-            margin-top: 50px;
+        .footer-brand {
+            text-align: center;
+            width: 100%;
         }
 
-        .icon-btn {
-            width: 70px;
-            height: 70px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255,255,255,0.2);
+        .footer-text {
+            font-size: 11px;
+            color: var(--ugm-celeste);
+            margin-bottom: 10px;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
 
-        .icon-btn img, .icon-btn svg {
-            width: 35px;
-            fill: white;
-        }
-
-        .bottom-line {
-            width: 40px;
+        .footer-line {
+            width: 60px;
             height: 4px;
             background: var(--ugm-dorado);
             margin: 0 auto;
+            border-radius: 2px;
         }
 
-        /* Animación */
+        /* Animación suave */
         .fade-in {
-            animation: fadeIn 0.8s;
+            animation: fadeIn 0.6s ease-in-out forwards;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
-    <div class="main-content" id="mainDisplay">
-        <div class="header-info">
-            <div class="current-date" id="liveClock">Cargando...</div>
+    <div class="main-content">
+        <div class="header-clock" id="clock">Cargando...</div>
+
+        <div class="logo-top-right">
+            <img src="Logo_ugm.png" alt="Logo Universidad Gabriela Mistral">
         </div>
 
-        <div class="logo-container">
-            <img src="logo.png" alt="Logo" class="logo-image"> </div>
+        <div class="current-event-box" id="currentArea"></div>
 
-        <div class="current-event-container" id="currentArea"></div>
-
-        <div class="next-events-container">
+        <div class="next-events">
             <span class="label">Próximas Reuniones</span>
             <div id="nextList"></div>
         </div>
     </div>
 
     <div class="sidebar">
-        <div class="room-id">
-            <div class="room-number">SALA 01</div>
-            <div class="room-name">Sala de<br>Reuniones</div>
+        <div class="room-info">
+            <div class="room-label">SALA 01</div>
+            <div class="room-name">SALA DE<br>REUNIONES</div>
         </div>
 
-        <div class="sidebar-icons">
-            <div class="icon-btn">
-                <svg viewBox="0 0 24 24"><path fill="white" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
-            </div>
-            <div class="icon-btn">
-                <svg viewBox="0 0 24 24"><path fill="white" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-            </div>
-        </div>
+        <div></div>
 
-        <div style="text-align: center;">
-            <div style="font-size: 10px; color: var(--ugm-celeste); margin-bottom: 10px; font-weight: bold;">UGM INSTITUCIONAL</div>
-            <div class="bottom-line"></div>
+        <div class="footer-brand">
+            <div class="footer-text">UGM INSTITUCIONAL</div>
+            <div class="footer-line"></div>
         </div>
     </div>
 
     <script>
-        // Mismos datos de prueba
-        const agendaSala = [
-            { title: "Reunión de Rectoría", org: "Secretaría General", start: "08:30", end: "10:30" },
-            { title: "Comité Académico", org: "Vicerrectoría", start: "11:30", end: "13:00" },
-            { title: "Planificación Alumni UGM", org: "Vinculación", start: "15:00", end: "16:30" },
+        // AGENDA DE PRUEBA: Modifica las reuniones aquí
+        const agenda = [
+            { title: "Planificación Alumni UGM", org: "Dirección de Vinculación", start: "15:00", end: "16:30" },
             { title: "Revisión de Presupuesto", org: "Finanzas", start: "17:00", end: "18:30" }
         ];
 
-        function updateDisplay() {
+        function refresh() {
             const now = new Date();
-            const timeOptions = { hour: '2-digit', minute: '2-digit' };
-            const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('liveClock').innerText = now.toLocaleDateString('es-CL', dateOptions) + " | " + now.toLocaleTimeString('es-CL', timeOptions);
+            const timeStr = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const dateStr = now.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+            
+            // Capitalizar la primera letra del día de la semana
+            document.getElementById('clock').innerText = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + " | " + timeStr;
 
-            const currentTimeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-            const currentMeeting = agendaSala.find(m => currentTimeStr >= m.start && currentTimeStr <= m.end);
+            const hhmm = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            const current = agenda.find(m => hhmm >= m.start && hhmm <= m.end);
+            
             const currentArea = document.getElementById('currentArea');
-
-            if (currentMeeting) {
+            if (current) {
                 currentArea.innerHTML = `
                     <div class="fade-in">
                         <span class="label">Evento Actual</span>
-                        <div class="current-time">${currentMeeting.start} - ${currentMeeting.end}</div>
-                        <div class="current-title">${currentMeeting.title}</div>
-                        <div class="status-indicator">OCUPADO</div>
+                        <div class="current-time-range">${current.start} - ${current.end}</div>
+                        <div class="current-meeting-title">${current.title}</div>
+                        <div class="status-badge status-occupied">OCUPADO</div>
                     </div>`;
             } else {
                 currentArea.innerHTML = `
                     <div class="fade-in">
-                        <span class="label">Estado de la Sala</span>
-                        <div class="current-time">${currentTimeStr}</div>
-                        <div class="current-title">Disponible para uso inmediato</div>
-                        <div class="status-indicator status-available">DISPONIBLE</div>
+                        <span class="label">Estado de Sala</span>
+                        <div class="current-time-range">${hhmm}</div>
+                        <div class="current-meeting-title" style="color:var(--ugm-celeste)">Sala disponible para uso inmediato</div>
+                        <div class="status-badge status-available">DISPONIBLE</div>
                     </div>`;
             }
 
-            const nextMeetings = agendaSala.filter(m => m.start > currentTimeStr).slice(0, 3);
+            const nexts = agenda.filter(m => m.start > hhmm).slice(0, 2);
             const nextList = document.getElementById('nextList');
-            if (nextMeetings.length > 0) {
-                nextList.innerHTML = nextMeetings.map(m => `
-                    <div class="next-event-item fade-in">
+            if (nexts.length > 0) {
+                nextList.innerHTML = nexts.map(m => `
+                    <div class="next-item fade-in">
                         <div class="next-time">${m.start} - ${m.end}</div>
                         <div class="next-details">
                             <div class="next-title">${m.title}</div>
-                            <div class="next-org">${m.org}</div>
+                            <div class="next-org">Organiza: ${m.org}</div>
                         </div>
                     </div>`).join('');
             } else {
-                nextList.innerHTML = '<div class="next-event-item">No hay más reuniones agendadas hoy.</div>';
+                nextList.innerHTML = '<div class="next-item fade-in" style="color: rgba(255,255,255,0.4); font-style: italic;">No hay más reuniones agendadas hoy.</div>';
             }
         }
 
-        setInterval(updateDisplay, 60000);
-        window.onload = updateDisplay;
+        // Actualización en segundo plano cada 60 segundos
+        setInterval(refresh, 60000);
+        window.onload = refresh;
     </script>
 </body>
 </html>
