@@ -3,302 +3,362 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sala 1 - Universidad Gabriela Mistral</title>
+    <title>Panel de Salas de Reuniones - UGM</title>
     <style>
-        :root {
-            --ugm-azul: #1B2A4A;       /* Azul Institucional */
-            --ugm-celeste: #52B3E5;    /* Celeste Complementario */
-            --ugm-dorado: #DDA126;     /* Dorado/Amarillo UGM */
-            --text-white: #ffffff;
-        }
-
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
         }
 
         body {
-            /* Mantiene la imagen de fondo de pantalla Alumni fija */
-            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png');
+            /* Usamos la imagen corporativa como fondo de pantalla de forma limpia */
+            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            background-color: #0d121f;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            overflow: hidden;
-            color: var(--text-white);
-        }
-
-        /* --- Panel Principal Izquierdo --- */
-        .main-content {
-            flex: 1;
-            padding: 50px 70px;
+            background-color: #f4f6f9;
+            color: #333;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            position: relative;
-            /* Capa oscura translúcida para legibilidad perfecta sobre la foto */
-            background: linear-gradient(to right, rgba(27, 42, 74, 0.9) 0%, rgba(27, 42, 74, 0.4) 100%);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            justify-content: space-between;
+            padding: 20px;
         }
 
-        .header-clock {
-            position: absolute;
-            top: 40px;
-            left: 70px;
-            font-size: 24px;
-            font-weight: 300;
-            color: var(--ugm-celeste);
-            letter-spacing: 1px;
-        }
-
-        /* Evento en Curso */
-        .current-event-box {
-            margin-bottom: 60px;
-            margin-top: 40px;
-        }
-
-        .label {
-            text-transform: uppercase;
-            font-size: 14px;
-            letter-spacing: 4px;
-            color: var(--ugm-dorado);
-            margin-bottom: 15px;
-            display: block;
-            font-weight: bold;
-        }
-
-        .current-time-range {
-            font-size: 85px;
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 15px;
-            letter-spacing: -2px;
-        }
-
-        .current-meeting-title {
-            font-size: 42px;
-            font-weight: 400;
-            max-width: 800px;
-            line-height: 1.2;
-        }
-
-        .status-badge {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 8px 22px;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .status-occupied { background: #cd3d3d; }
-        .status-available { background: #2f9e5f; }
-
-        /* Próximas Reuniones */
-        .next-events {
-            border-top: 1px solid rgba(255,255,255,0.2);
-            padding-top: 35px;
-            max-width: 750px;
-        }
-
-        .next-item {
-            display: flex;
-            margin-bottom: 25px;
-            align-items: flex-start;
-        }
-
-        .next-time {
-            min-width: 180px;
-            font-size: 20px;
-            font-weight: bold;
-            color: var(--ugm-celeste);
-        }
-
-        .next-title {
-            font-size: 22px;
-            font-weight: 500;
+        /* Encabezado Superior Translúcido */
+        .main-header {
+            background: rgba(27, 42, 74, 0.95);
             color: #ffffff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-left: 5px solid #dda126;
         }
 
-        .next-org {
-            font-size: 14px;
-            color: rgba(255,255,255,0.55);
+        .header-left .title {
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .header-left .subtitle {
+            font-size: 12px;
+            color: #b0c4de;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             margin-top: 2px;
         }
 
-        /* --- Panel Lateral Derecho (Sidebar Institucional) --- */
-        .sidebar {
-            width: 320px;
-            background-color: var(--ugm-azul);
+        .date-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Contenedor Grid para ver todas las salas a la vez */
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(48%, 1fr));
+            gap: 20px;
+            flex-grow: 1;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .rooms-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tarjeta de cada Sala */
+        .room-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            border-top: 5px solid #1b2a4a;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .room-card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Variación de color superior para destacar el Directorio */
+        .room-card.directorio {
+            border-top: 5px solid #dda126;
+        }
+
+        .room-title-bar {
+            background: rgba(248, 249, 250, 0.8);
+            padding: 15px 20px;
+            border-bottom: 1px solid #eef2f5;
+            display: flex;
             justify-content: space-between;
-            padding: 60px 20px;
-            border-left: 8px solid var(--ugm-dorado); /* Línea dorada UGM */
-            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        }
-
-        .room-info {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .room-label {
-            font-size: 22px;
-            color: var(--ugm-dorado);
-            font-weight: bold;
-            letter-spacing: 3px;
-            margin-bottom: 12px;
+            align-items: center;
         }
 
         .room-name {
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1.2;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #1b2a4a;
         }
 
-        /* Nuevo contenedor centrado para el Logo en el panel azul */
-        .sidebar-logo-center {
+        .room-card.directorio .room-name {
+            color: #b8820a;
+        }
+
+        .event-count {
+            font-size: 11px;
+            background: #1b2a4a;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .room-card.directorio .event-count {
+            background: #dda126;
+        }
+
+        /* Lista de reuniones dentro de la tarjeta */
+        .meetings-list {
+            padding: 15px 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 280px;
+        }
+
+        /* Item de reunión individual */
+        .meeting-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .meeting-item:last-child {
+            border-bottom: none;
+        }
+
+        .meeting-time {
+            min-width: 95px;
+        }
+
+        .time-box {
+            background: #e2e8f0;
+            color: #1b2a4a;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .meeting-details {
+            flex-grow: 1;
+            padding-left: 15px;
+        }
+
+        .meeting-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 2px;
+        }
+
+        .meeting-info {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Estado sin reuniones */
+        .no-meetings {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 100%;
-            padding: 20px 0;
-        }
-
-        .sidebar-logo-center img {
-            width: 180px; /* Tamaño grande y centrado dentro del recuadro */
-            height: auto;
-            object-fit: contain;
-        }
-
-        .footer-brand {
+            height: 100%;
+            min-height: 120px;
+            color: #718096;
+            font-style: italic;
+            font-size: 13px;
             text-align: center;
-            width: 100%;
         }
+
+        /* Barra Inferior Corporativa */
+        .brand-bar {
+            height: 5px;
+            width: 100%;
+            display: flex;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
+        .brand-bar .color-2 { flex: 1; background-color: #52b3e5; }
+        .brand-bar .color-3 { flex: 1; background-color: #dda126; }
 
         .footer-text {
+            text-align: center;
+            margin-top: 10px;
             font-size: 11px;
-            color: var(--ugm-celeste);
-            margin-bottom: 10px;
+            color: #ffffff;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
             font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .footer-line {
-            width: 60px;
-            height: 4px;
-            background: var(--ugm-dorado);
-            margin: 0 auto;
-            border-radius: 2px;
-        }
-
-        /* Animación suave */
-        .fade-in {
-            animation: fadeIn 0.6s ease-in-out forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
-    <div class="main-content">
-        <div class="header-clock" id="clock">Cargando...</div>
-
-        <div class="current-event-box" id="currentArea"></div>
-
-        <div class="next-events">
-            <span class="label">Próximas Reuniones</span>
-            <div id="nextList"></div>
+    <!-- Encabezado Principal -->
+    <div class="main-header">
+        <div class="header-left">
+            <div class="title">Control de Agenda Diaria de Salas</div>
+            <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
         </div>
+        <div class="date-badge" id="liveDate"></div>
     </div>
 
-    <div class="sidebar">
-        <div class="room-info">
-            <div class="room-label">SALA 01</div>
-            <div class="room-name">SALA DE<br>REUNIONES</div>
+    <!-- Grid con las 4 salas en paralelo para ver todo el día de un vistazo -->
+    <div class="rooms-grid">
+        
+        <!-- Sala de Directorio -->
+        <div class="room-card directorio">
+            <div class="room-title-bar">
+                <span class="room-name">Sala de Directorio</span>
+                <span class="event-count">3 Reuniones</span>
+            </div>
+            <div class="meetings-list">
+                <div class="meeting-item">
+                    <div class="meeting-time">
+                        <span class="time-box">09:00 - 11:00</span>
+                    </div>
+                    <div class="meeting-details">
+                        <div class="meeting-title">Sesión Ordinaria de Directorio UGM</div>
+                        <div class="meeting-info">Organiza: Secretaría General</div>
+                    </div>
+                </div>
+                <div class="meeting-item">
+                    <div class="meeting-time">
+                        <span class="time-box">11:30 - 13:00</span>
+                    </div>
+                    <div class="meeting-details">
+                        <div class="meeting-title">Comité de Aseguramiento de la Calidad</div>
+                        <div class="meeting-info">Organiza: Dirección de Calidad</div>
+                    </div>
+                </div>
+                <div class="meeting-item">
+                    <div class="meeting-time">
+                        <span class="time-box">15:00 - 16:30</span>
+                    </div>
+                    <div class="meeting-details">
+                        <div class="meeting-title">Revisión Estratégica Institucional</div>
+                        <div class="meeting-info">Organiza: Rectoría</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="sidebar-logo-center">
-            <img src="Logo_ugm.png" alt="Logo Universidad Gabriela Mistral">
+        <!-- Sala de Reuniones 2 -->
+        <div class="room-card">
+            <div class="room-title-bar">
+                <span class="room-name">Sala de Reuniones 2</span>
+                <span class="event-count">2 Reuniones</span>
+            </div>
+            <div class="meetings-list">
+                <div class="meeting-item">
+                    <div class="meeting-time">
+                        <span class="time-box">10:00 - 11:30</span>
+                    </div>
+                    <div class="meeting-details">
+                        <div class="meeting-title">Coordinación Matrículas y Admisión</div>
+                        <div class="meeting-info">Organiza: Equipo de Difusión</div>
+                    </div>
+                </div>
+                <div class="meeting-item">
+                    <div class="meeting-time">
+                        <span class="time-box">14:30 - 16:00</span>
+                    </div>
+                    <div class="meeting-details">
+                        <div class="meeting-title">Planificación Encuentro Alumni UGM</div>
+                        <div class="meeting-info">Organiza: Dirección de Vinculación</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="footer-brand">
-            <div class="footer-text">UGM INSTITUCIONAL</div>
-            <div class="footer-line"></div>
+        <!-- Sala de Reuniones 3 -->
+        <div class="room-card">
+            <div class="room-title-bar">
+                <span class="room-name">Sala de Reuniones 3</span>
+                <span class="event-count">Disponible</span>
+            </div>
+            <div class="meetings-list">
+                <div class="no-meetings">
+                    No hay reuniones programadas para hoy en esta sala.
+                </div>
+            </div>
+        </div>
+
+        <!-- Sala de Reuniones 4 -->
+        <div class="room-card">
+            <div class="room-title-bar">
+                <span class="room-name">Sala de Reuniones 4</span>
+                <span class="event-count">1 Reunión</span>
+            </div>
+            <div class="meetings-list">
+                <div class="meeting-item">
+                    <div class="meeting-time">
+                        <span class="time-box">16:00 - 17:30</span>
+                    </div>
+                    <div class="meeting-details">
+                        <div class="meeting-title">Alineación Plataformas TI y Virtuales</div>
+                        <div class="meeting-info">Organiza: Soporte Técnico</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer Institucional -->
+    <div>
+        <div class="brand-bar">
+            <div class="color-1"></div>
+            <div class="color-2"></div>
+            <div class="color-3"></div>
+        </div>
+        <div class="footer-text">
+            Universidad Gabriela Mistral — Construyendo Nuestra Huella
         </div>
     </div>
 
     <script>
-        // AGENDA DE PRUEBA: Modifica las reuniones aquí
-        const agenda = [
-            { title: "Planificación Alumni UGM", org: "Dirección de Vinculación", start: "15:00", end: "16:30" },
-            { title: "Revisión de Presupuesto", org: "Finanzas", start: "17:00", end: "18:30" }
-        ];
-
-        function refresh() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: true });
-            const dateStr = now.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
-            
-            // Capitalizar la primera letra del día de la semana
-            document.getElementById('clock').innerText = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + " | " + timeStr;
-
-            const hhmm = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-            const current = agenda.find(m => hhmm >= m.start && hhmm <= m.end);
-            
-            const currentArea = document.getElementById('currentArea');
-            if (current) {
-                currentArea.innerHTML = `
-                    <div class="fade-in">
-                        <span class="label">Evento Actual</span>
-                        <div class="current-time-range">${current.start} - ${current.end}</div>
-                        <div class="current-meeting-title">${current.title}</div>
-                        <div class="status-badge status-occupied">OCUPADO</div>
-                    </div>`;
-            } else {
-                currentArea.innerHTML = `
-                    <div class="fade-in">
-                        <span class="label">Estado de Sala</span>
-                        <div class="current-time-range">${hhmm}</div>
-                        <div class="current-meeting-title" style="color:var(--ugm-celeste)">Sala disponible para uso inmediato</div>
-                        <div class="status-badge status-available">DISPONIBLE</div>
-                    </div>`;
-            }
-
-            const nexts = agenda.filter(m => m.start > hhmm).slice(0, 2);
-            const nextList = document.getElementById('nextList');
-            if (nexts.length > 0) {
-                nextList.innerHTML = nexts.map(m => `
-                    <div class="next-item fade-in">
-                        <div class="next-time">${m.start} - ${m.end}</div>
-                        <div class="next-details">
-                            <div class="next-title">${m.title}</div>
-                            <div class="next-org">Organiza: ${m.org}</div>
-                        </div>
-                    </div>`).join('');
-            } else {
-                nextList.innerHTML = '<div class="next-item fade-in" style="color: rgba(255,255,255,0.4); font-style: italic;">No hay más reuniones agendadas hoy.</div>';
-            }
+        // Función para inyectar la fecha del día actual automáticamente en el header
+        function updateDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date();
+            let dateStr = today.toLocaleDateString('es-CL', options);
+            // Capitalizar primera letra
+            dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+            document.getElementById('liveDate').innerText = dateStr;
         }
-
-        // Actualización en segundo plano cada 60 segundos
-        setInterval(refresh, 60000);
-        window.onload = refresh;
+        
+        window.onload = updateDate;
     </script>
 </body>
 </html>
