@@ -66,7 +66,6 @@
             margin-top: 2px;
         }
 
-        /* Badge que contiene Fecha y Hora en tiempo real */
         .date-badge {
             background: rgba(255, 255, 255, 0.15);
             padding: 8px 16px;
@@ -80,13 +79,13 @@
         }
 
         .live-time {
-            color: #52b3e5; /* Resalte celeste institucional */
+            color: #52b3e5;
             display: block;
             font-size: 16px;
             margin-top: 2px;
         }
 
-        /* Contenedor Grid para ver todas las salas a la vez */
+        /* Contenedor Grid */
         .rooms-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(48%, 1fr));
@@ -96,9 +95,7 @@
         }
 
         @media (max-width: 900px) {
-            .rooms-grid {
-                grid-template-columns: 1fr;
-            }
+            .rooms-grid { grid-template-columns: 1fr; }
         }
 
         /* Tarjeta de cada Sala */
@@ -114,13 +111,7 @@
             transition: transform 0.2s;
         }
 
-        .room-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .room-card.directorio-style {
-            border-top: 5px solid #dda126;
-        }
+        .room-card.directorio-style { border-top: 5px solid #dda126; }
 
         .room-title-bar {
             background: rgba(248, 249, 250, 0.8);
@@ -131,115 +122,51 @@
             align-items: center;
         }
 
-        .room-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #1b2a4a;
-        }
+        .room-name { font-size: 16px; font-weight: bold; color: #1b2a4a; }
+        .room-card.directorio-style .room-name { color: #b8820a; }
+        .event-count { font-size: 11px; background: #1b2a4a; color: #fff; padding: 3px 8px; border-radius: 10px; font-weight: bold; }
+        .room-card.directorio-style .event-count { background: #dda126; }
 
-        .room-card.directorio-style .room-name {
-            color: #b8820a;
-        }
+        .meetings-list { padding: 15px 20px; flex-grow: 1; overflow-y: auto; max-height: 280px; }
 
-        .event-count {
-            font-size: 11px;
-            background: #1b2a4a;
-            color: #fff;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-
-        .room-card.directorio-style .event-count {
-            background: #dda126;
-        }
-
-        /* Lista de reuniones dentro de la tarjeta */
-        .meetings-list {
-            padding: 15px 20px;
-            flex-grow: 1;
-            overflow-y: auto;
-            max-height: 280px;
-        }
-
-        /* Item de reunión individual */
+        /* Estilos de los Items de Reunión y Animaciones */
         .meeting-item {
             display: flex;
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid #edf2f7;
+            opacity: 1;
+            transform: scaleY(1);
+            transform-origin: top;
+            transition: opacity 0.8s ease, transform 0.8s ease, padding 0.8s ease, max-height 0.8s ease;
+            max-height: 100px; 
         }
 
-        .meeting-item:last-child {
+        .meeting-item:last-child { border-bottom: none; }
+        .meeting-time { min-width: 95px; }
+        .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; text-align: center; }
+        .meeting-details { flex-grow: 1; padding-left: 15px; }
+        .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; margin-bottom: 2px; }
+        .meeting-info { font-size: 12px; color: #718096; }
+
+        /* Clase de CSS que se inyecta dinámicamente para el desvanecimiento */
+        .meeting-item.fade-out {
+            opacity: 0;
+            transform: scaleY(0);
+            padding-top: 0;
+            padding-bottom: 0;
+            max-height: 0;
             border-bottom: none;
         }
 
-        .meeting-time {
-            min-width: 95px;
-        }
+        .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
 
-        .time-box {
-            background: #e2e8f0;
-            color: #1b2a4a;
-            font-size: 12px;
-            font-weight: bold;
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .meeting-details {
-            flex-grow: 1;
-            padding-left: 15px;
-        }
-
-        .meeting-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #2d3748;
-            margin-bottom: 2px;
-        }
-
-        .meeting-info {
-            font-size: 12px;
-            color: #718096;
-        }
-
-        /* Estado sin reuniones */
-        .no-meetings {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            min-height: 120px;
-            color: #718096;
-            font-style: italic;
-            font-size: 13px;
-            text-align: center;
-        }
-
-        /* Barra Inferior Corporativa */
-        .brand-bar {
-            height: 5px;
-            width: 100%;
-            display: flex;
-            border-radius: 4px;
-            overflow: hidden;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
+        /* Footer */
+        .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
         .brand-bar .color-2 { flex: 1; background-color: #52b3e5; }
         .brand-bar .color-3 { flex: 1; background-color: #dda126; }
-
-        .footer-text {
-            text-align: center;
-            margin-top: 10px;
-            font-size: 11px;
-            color: #ffffff;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-            font-weight: bold;
-        }
+        .footer-text { text-align: center; margin-top: 10px; font-size: 11px; color: #ffffff; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -266,13 +193,12 @@
             <div class="color-2"></div>
             <div class="color-3"></div>
         </div>
-        <div class="footer-text">
-            Universidad Gabriela Mistral — Construyendo Nuestra Huella
-        </div>
+        <div class="footer-text">Universidad Gabriela Mistral — Construyendo Nuestra Huella</div>
     </div>
 
     <script>
-        // CONFIGURACIÓN DE CONEXIÓN A LAS SALAS (MAPEO DINÁMICO)
+        // DATA DE PRUEBA ASOCIADA AL DÍA ACTUAL
+        // Nota el formato "HH:MM": Es el que entrega Microsoft Graph de manera estándar
         const salasUGM = [
             {
                 id: "3162F1E1-C4C0-604B-51D8-91DA78970B97",
@@ -280,9 +206,9 @@
                 displayName: "Sala de Directorio",
                 isDirectorio: true,
                 agenda: [
-                    { title: "Sesión Ordinaria de Directorio UGM", org: "Secretaría General", time: "09:00 - 11:00" },
-                    { title: "Comité de Aseguramiento de la Calidad", org: "Dirección de Calidad", time: "11:30 - 13:00" },
-                    { title: "Revisión Estratégica Institucional", org: "Rectoría", time: "15:00 - 16:30" }
+                    { idMeet: "m1", title: "Reunión de Coordinación Directiva", org: "Rectoría", startTime: "08:30", endTime: "10:30" },
+                    { idMeet: "m2", title: "Comité de Aseguramiento de la Calidad", org: "Dirección de Calidad", startTime: "11:30", endTime: "13:00" },
+                    { idMeet: "m3", title: "Planificación Presupuestaria UGM", org: "Finanzas", startTime: "16:40", endTime: "18:00" } 
                 ]
             },
             {
@@ -291,8 +217,8 @@
                 displayName: "Sala de Reuniones 2",
                 isDirectorio: false,
                 agenda: [
-                    { title: "Coordinación Matrículas y Admisión", org: "Equipo de Difusión", time: "10:00 - 11:30" },
-                    { title: "Planificación Encuentro Alumni UGM", org: "Dirección de Vinculación", time: "14:30 - 16:00" }
+                    { idMeet: "m4", title: "Coordinación Matrículas y Admisión", org: "Equipo de Difusión", startTime: "10:00", endTime: "11:30" },
+                    { idMeet: "m5", title: "Planificación Encuentro Alumni UGM", org: "Dirección de Vinculación", startTime: "14:30", endTime: "16:00" }
                 ]
             },
             {
@@ -308,11 +234,12 @@
                 displayName: "Sala de Reuniones 4",
                 isDirectorio: false,
                 agenda: [
-                    { title: "Alineación Plataformas TI y Virtuales", org: "Soporte Técnico", time: "16:00 - 17:30" }
+                    { idMeet: "m6", title: "Alineación Plataformas TI y Virtuales", org: "Soporte Técnico", startTime: "16:00", endTime: "17:30" }
                 ]
             }
         ];
 
+        // Dibuja el Dashboard completo en pantalla
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
             let gridHTML = "";
@@ -326,23 +253,19 @@
                     <div class="${cardClass}">
                         <div class="room-title-bar">
                             <span class="room-name">${sala.displayName}</span>
-                            <span class="event-count">${countText}</span>
+                            <span class="event-count" id="count-${sala.id}">${countText}</span>
                         </div>
-                        <div class="meetings-list">
+                        <div class="meetings-list" id="list-${sala.id}">
                 `;
 
                 if (totalReuniones === 0) {
-                    gridHTML += `
-                        <div class="no-meetings">
-                            No hay reuniones programadas para hoy en esta sala.
-                        </div>
-                    `;
+                    gridHTML += `<div class="no-meetings" id="empty-${sala.id}">No hay reuniones programadas para hoy en esta sala.</div>`;
                 } else {
                     sala.agenda.forEach(meet => {
                         gridHTML += `
-                            <div class="meeting-item">
+                            <div class="meeting-item" id="meet-${meet.idMeet}">
                                 <div class="meeting-time">
-                                    <span class="time-box">${meet.time}</span>
+                                    <span class="time-box">${meet.startTime} - ${meet.endTime}</span>
                                 </div>
                                 <div class="meeting-details">
                                     <div class="meeting-title">${meet.title}</div>
@@ -353,34 +276,77 @@
                     });
                 }
 
-                gridHTML += `
-                        </div>
-                    </div>
-                `;
+                gridHTML += `</div></div>`;
             });
 
             container.innerHTML = gridHTML;
         }
 
+        // REVISIÓN CRÍTICA: Evalúa si pasaron 20 minutos desde el inicio de cada reunión
+        function checkMeetingsExpiration() {
+            const now = new Date();
+            const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
+
+            salasUGM.forEach(sala => {
+                let cambioRealizado = false;
+
+                // Recorremos la agenda al revés para poder eliminar elementos de forma segura
+                for (let i = sala.agenda.length - 1; i >= 0; i--) {
+                    const meet = sala.agenda[i];
+                    const [startHour, startMin] = meet.startTime.split(':').map(Number);
+                    const startMinutesTotal = (startHour * 60) + startMin;
+
+                    // LÓGICA: Si la hora actual supera por 20 minutos o más el inicio de la reunión
+                    if (currentMinutesTotal >= (startMinutesTotal + 20)) {
+                        const element = document.getElementById(`meet-${meet.idMeet}`);
+                        
+                        if (element && !element.classList.contains('fade-out')) {
+                            // 1. Inyectamos la clase fade-out de CSS
+                            element.classList.add('fade-out');
+                            cambioRealizado = true;
+
+                            // 2. Sacamos el objeto del arreglo interno tras terminar la animación visual (800ms)
+                            setTimeout(() => {
+                                sala.agenda = sala.agenda.filter(m => m.idMeet !== meet.idMeet);
+                                element.remove();
+                                
+                                // Recalcular contadores en la tarjeta de la sala
+                                const total = sala.agenda.length;
+                                document.getElementById(`count-${sala.id}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
+                                
+                                // Si se quedó vacía, mostramos el mensaje de "Disponible"
+                                if (total === 0) {
+                                    const listContainer = document.getElementById(`list-${sala.id}`);
+                                    if (listContainer && !document.getElementById(`empty-${sala.id}`)) {
+                                        listContainer.innerHTML = `<div class="no-meetings" id="empty-${sala.id}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                                    }
+                                }
+                            }, 800);
+                        }
+                    }
+                }
+            });
+        }
+
         function updateLiveDateTime() {
             const now = new Date();
             
-            // Fecha Completa en español chileno
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             let dateStr = now.toLocaleDateString('es-CL', dateOptions);
             dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
             document.getElementById('liveDate').innerText = dateStr;
 
-            // Cambiado a formato de 24 horas estricto (hour12: false)
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-            const timeStr = now.toLocaleTimeString('es-CL', timeOptions);
-            document.getElementById('liveTime').innerText = timeStr;
+            document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', timeOptions);
+
+            // Ejecuta la revisión de expiración de minutos a la par del reloj
+            checkMeetingsExpiration();
         }
         
         window.onload = function() {
             updateLiveDateTime();
             renderDashboard();
-            setInterval(updateLiveDateTime, 1000);
+            setInterval(updateLiveDateTime, 1000); // Sincronizado al segundero
         };
     </script>
 </body>
