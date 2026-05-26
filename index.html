@@ -13,6 +13,7 @@
         }
 
         body {
+            /* Mapeado exactamente a tu archivo en GitHub */
             background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
             background-size: cover;
             background-position: center;
@@ -40,13 +41,26 @@
             border-left: 5px solid #dda126;
         }
 
-        .header-left .title {
+        .header-left-block {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Ajuste para el nuevo logo institucional solicitado */
+        .header-logo {
+            width: 65px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .header-text-group .title {
             font-size: 22px;
             font-weight: bold;
             letter-spacing: 0.5px;
         }
 
-        .header-left .subtitle {
+        .header-text-group .subtitle {
             font-size: 12px;
             color: #b0c4de;
             text-transform: uppercase;
@@ -54,6 +68,7 @@
             margin-top: 2px;
         }
 
+        /* Badge que contiene Fecha y Hora en tiempo real */
         .date-badge {
             background: rgba(255, 255, 255, 0.15);
             padding: 8px 16px;
@@ -62,6 +77,15 @@
             font-weight: bold;
             letter-spacing: 0.5px;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: right;
+            line-height: 1.3;
+        }
+
+        .live-time {
+            color: #52b3e5; /* Resalte celeste institucional para el reloj */
+            display: block;
+            font-size: 16px;
+            margin-top: 2px;
         }
 
         /* Contenedor Grid para ver todas las salas a la vez */
@@ -224,11 +248,17 @@
 <body>
 
     <div class="main-header">
-        <div class="header-left">
-            <div class="title">Visor de Agenda diaria de Salas</div>
-            <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
+        <div class="header-left-block">
+            <img src="logo-blanco-celeste.png" alt="Logo UGM" class="header-logo">
+            <div class="header-text-group">
+                <div class="title">Visor de Agenda diaria de Salas</div>
+                <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
+            </div>
         </div>
-        <div class="date-badge" id="liveDate"></div>
+        <div class="date-badge">
+            <span id="liveDate">Cargando fecha...</span>
+            <span id="liveTime" class="live-time">00:00:00</span>
+        </div>
     </div>
 
     <div class="rooms-grid" id="roomsContainer"></div>
@@ -335,17 +365,27 @@
             container.innerHTML = gridHTML;
         }
 
-        function updateDate() {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const today = new Date();
-            let dateStr = today.toLocaleDateString('es-CL', options);
+        // Función para actualizar Fecha y Hora exacta por segundo
+        function updateLiveDateTime() {
+            const now = new Date();
+            
+            // Renderizar la fecha completa
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            let dateStr = now.toLocaleDateString('es-CL', dateOptions);
             dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
             document.getElementById('liveDate').innerText = dateStr;
+
+            // Renderizar la hora con segundos en formato de 12 horas (AM/PM)
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const timeStr = now.toLocaleTimeString('es-CL', timeOptions);
+            document.getElementById('liveTime').innerText = timeStr;
         }
         
         window.onload = function() {
-            updateDate();
+            updateLiveDateTime();
             renderDashboard();
+            // Intervalo activo cada 1 segundo para el segundero del reloj
+            setInterval(updateLiveDateTime, 1000);
         };
     </script>
 </body>
