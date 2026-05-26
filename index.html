@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Salas de Reuniones - UGM</title>
+    <title>Visor de Agenda diaria de Salas - UGM</title>
     <style>
         * {
             box-sizing: border-box;
@@ -225,7 +225,7 @@
 
     <div class="main-header">
         <div class="header-left">
-            <div class="title">Control de Agenda Diaria de Salas</div>
+            <div class="title">Visor de Agenda diaria de Salas</div>
             <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
         </div>
         <div class="date-badge" id="liveDate"></div>
@@ -245,17 +245,13 @@
     </div>
 
     <script>
-        // =========================================================================
-        // CONFIGURACIÓN DE CONEXIÓN A LAS SALAS (MAPEO DE CORREOS / GUID DE OUTLOOK)
-        // =========================================================================
-        // Cuando tengas la API real, cambiarás el "displayName" y los datos de la "agenda"
-        // dinámicamente con la respuesta JSON que te entregue Microsoft Graph.
+        // CONFIGURACIÓN DE CONEXIÓN A LAS SALAS (MAPEO DINÁMICO)
         const salasUGM = [
             {
-                id: "3162F1E1-C4C0-604B-51D8-91DA78970B97", // Ejemplo de GUID o correo de recurso
+                id: "3162F1E1-C4C0-604B-51D8-91DA78970B97",
                 resourceEmail: "sala.directorio@ugm.cl",
-                displayName: "Sala de Directorio",       // Nombre dinámico en pantalla
-                isDirectorio: true,                        // Activa el color dorado decorativo
+                displayName: "Sala de Directorio",
+                isDirectorio: true,
                 agenda: [
                     { title: "Sesión Ordinaria de Directorio UGM", org: "Secretaría General", time: "09:00 - 11:00" },
                     { title: "Comité de Aseguramiento de la Calidad", org: "Dirección de Calidad", time: "11:30 - 13:00" },
@@ -277,7 +273,7 @@
                 resourceEmail: "sala.reuniones3@ugm.cl",
                 displayName: "Sala de Reuniones 3",
                 isDirectorio: false,
-                agenda: [] // Lista vacía para simular estado disponible
+                agenda: []
             },
             {
                 id: "78912345-6789-abcd-ef01-234567890abc",
@@ -290,18 +286,15 @@
             }
         ];
 
-        // Función encargada de renderizar la grilla completa en base al arreglo de salas
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
             let gridHTML = "";
 
             salasUGM.forEach(sala => {
-                // Determinar clases de estilo y contadores según la data
                 const cardClass = sala.isDirectorio ? "room-card directorio-style" : "room-card";
                 const totalReuniones = sala.agenda.length;
                 const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
 
-                // Construcción de la cabecera de la casilla con el nombre dinámico de la sala
                 gridHTML += `
                     <div class="${cardClass}">
                         <div class="room-title-bar">
@@ -311,7 +304,6 @@
                         <div class="meetings-list">
                 `;
 
-                // Construcción de la lista de reuniones interna
                 if (totalReuniones === 0) {
                     gridHTML += `
                         <div class="no-meetings">
@@ -334,18 +326,15 @@
                     });
                 }
 
-                // Cierre de etiquetas de la tarjeta
                 gridHTML += `
                         </div>
                     </div>
                 `;
             });
 
-            // Inyectar todo el HTML estructurado dentro del contenedor común
             container.innerHTML = gridHTML;
         }
 
-        // Función para inyectar la fecha del día actual automáticamente en el header
         function updateDate() {
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const today = new Date();
@@ -356,7 +345,7 @@
         
         window.onload = function() {
             updateDate();
-            renderDashboard(); // Dibuja las salas dinámicamente al cargar
+            renderDashboard();
         };
     </script>
 </body>
