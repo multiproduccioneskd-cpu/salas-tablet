@@ -20,7 +20,8 @@
         }
 
         body {
-            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
+            /* Corregido exactamente al archivo PNG que tienes en tu GitHub */
+            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -32,7 +33,7 @@
             color: var(--text-main);
         }
 
-        /* --- Panel Principal Izquierdo (Contenido y Reuniones) --- */
+        /* --- Panel Principal Izquierdo (Contenido) --- */
         .main-content {
             flex: 1;
             padding: 50px 60px;
@@ -99,12 +100,12 @@
             font-weight: bold;
             margin-top: 20px;
             letter-spacing: 1px;
-            background: #cd3d3d; /* Rojo para Ocupado */
+            background: #cd3d3d;
             box-shadow: 0 4px 12px rgba(205, 61, 61, 0.3);
         }
 
         .status-available {
-            background: #2f9e5f; /* Verde para Disponible */
+            background: #2f9e5f;
             box-shadow: 0 4px 12px rgba(47, 158, 95, 0.3);
         }
 
@@ -140,7 +141,7 @@
             color: rgba(255,255,255,0.55);
         }
 
-        /* --- Panel Lateral Derecho (Identificador de Sala) --- */
+        /* --- Panel Lateral Derecho (Sala) --- */
         .sidebar {
             width: 300px;
             background-color: var(--ugm-azul);
@@ -217,7 +218,6 @@
             border-radius: 2px;
         }
 
-        /* Animaciones de transición (Fade In) */
         .fade-in {
             animation: fadeInElement 0.6s ease-in-out forwards;
         }
@@ -234,13 +234,11 @@
             <div class="current-date" id="liveClock">Cargando fecha y hora...</div>
         </div>
 
-        <div class="current-event-container" id="currentArea">
-            </div>
+        <div class="current-event-container" id="currentArea"></div>
 
         <div class="next-events-container">
             <span class="label">Próximas Reuniones de Hoy</span>
-            <div id="nextList">
-                </div>
+            <div id="nextList"></div>
         </div>
     </div>
 
@@ -266,9 +264,7 @@
     </div>
 
     <script>
-        // =========================================================================
-        // AGENDA DE PRUEBA: Edita estos datos directamente desde el Bloc de notas
-        // =========================================================================
+        // Agenda de prueba de la Sala
         const agendaSala = [
             { title: "Reunión de Rectoría", org: "Secretaría General", start: "08:30", end: "10:30" },
             { title: "Comité Académico Interno", org: "Vicerrectoría Académica", start: "11:00", end: "13:00" },
@@ -279,7 +275,6 @@
         function updateTabletDisplay() {
             const now = new Date();
             
-            // 1. Renderizar el reloj del sistema (Fecha | Hora)
             const timeOptions = { hour: '2-digit', minute: '2-digit' };
             const dateOptions = { weekday: 'long', day: 'numeric', month: 'long' };
             
@@ -288,10 +283,8 @@
             
             document.getElementById('liveClock').innerText = dateString + " | " + now.toLocaleTimeString('es-CL', timeOptions);
 
-            // Generar string HH:MM de la hora actual para comparar con la agenda
             const currentHourStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
 
-            // 2. Lógica para buscar el Evento de la Hora Actual
             const activeMeeting = agendaSala.find(meet => currentHourStr >= meet.start && currentHourStr <= meet.end);
             const currentArea = document.getElementById('currentArea');
 
@@ -315,7 +308,6 @@
                 `;
             }
 
-            // 3. Lógica para renderizar los Próximos Eventos del día
             const upcomingMeetings = agendaSala.filter(meet => meet.start > currentHourStr).slice(0, 3);
             const nextList = document.getElementById('nextList');
             
@@ -334,7 +326,6 @@
             }
         }
 
-        // Configuración de refresco: actualiza automáticamente cada 1 minuto (60000 ms)
         setInterval(updateTabletDisplay, 60000);
         window.onload = updateTabletDisplay;
     </script>
