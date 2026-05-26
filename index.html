@@ -13,7 +13,6 @@
         }
 
         body {
-            /* Mapeado exactamente a tu archivo en GitHub */
             background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
             background-size: cover;
             background-position: center;
@@ -47,7 +46,6 @@
             gap: 20px;
         }
 
-        /* Ajuste para el nuevo logo institucional solicitado */
         .header-logo {
             width: 65px;
             height: auto;
@@ -82,7 +80,7 @@
         }
 
         .live-time {
-            color: #52b3e5; /* Resalte celeste institucional para el reloj */
+            color: #52b3e5; /* Resalte celeste institucional */
             display: block;
             font-size: 16px;
             margin-top: 2px;
@@ -120,7 +118,6 @@
             transform: translateY(-2px);
         }
 
-        /* Variación para destacar visualmente el Directorio */
         .room-card.directorio-style {
             border-top: 5px solid #dda126;
         }
@@ -365,18 +362,17 @@
             container.innerHTML = gridHTML;
         }
 
-        // Función para actualizar Fecha y Hora exacta por segundo
         function updateLiveDateTime() {
             const now = new Date();
             
-            // Renderizar la fecha completa
+            // Fecha Completa en español chileno
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             let dateStr = now.toLocaleDateString('es-CL', dateOptions);
             dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
             document.getElementById('liveDate').innerText = dateStr;
 
-            // Renderizar la hora con segundos en formato de 12 horas (AM/PM)
-            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            // Cambiado a formato de 24 horas estricto (hour12: false)
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
             const timeStr = now.toLocaleTimeString('es-CL', timeOptions);
             document.getElementById('liveTime').innerText = timeStr;
         }
@@ -384,7 +380,6 @@
         window.onload = function() {
             updateLiveDateTime();
             renderDashboard();
-            // Intervalo activo cada 1 segundo para el segundero del reloj
             setInterval(updateLiveDateTime, 1000);
         };
     </script>
