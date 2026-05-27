@@ -212,7 +212,7 @@
         }
 
         function processSharepointData(items) {
-            // Estructura limpia e institucional de tus cuatro salas
+            // Estructura limpia de los paneles físicos
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", isDirectorio: true, agenda: [] },
                 "Sala 1": { displayName: "Sala 1", isDirectorio: false, agenda: [] },
@@ -224,14 +224,16 @@
                 const fields = item.fields;
                 if (!fields) return;
 
+                // Title contiene el lugar físico ("Sala 1", "Sala 2", etc.)
                 const salaRaw = String(fields.Title || "").toLowerCase(); 
                 const rawInicio = fields.HoraInicio;
                 const rawFin = fields.HoraFin;
 
-                // ASIGNACIÓN DIRECTA EXTRAÍDA DESDE LAS COLUMNAS DE SHAREPOINT
-                // Intentamos capturar 'Asunto', si no está, recorremos campos alternativos limpios
+                // CAPTURA DIRECTA Y EXCLUSIVA DEL ASUNTO DE LA REUNIÓN
+                // Forzamos que lea la columna "Asunto" para el cuerpo interno de la tarjeta
                 let asuntoReunion = parseField(fields.Asunto || fields.asunto);
-                
+
+                // Si no viene la columna "Asunto", hace un barrido de emergencia ignorando IDs
                 if (!asuntoReunion) {
                     for (let key in fields) {
                         const keyLower = key.toLowerCase();
@@ -249,7 +251,7 @@
                     }
                 }
 
-                // Respaldo estético si no viene especificado en la celda
+                // Respaldo final si el campo está completamente en blanco en SharePoint
                 if (!asuntoReunion) {
                     asuntoReunion = "Reunión Reservada";
                 }
@@ -257,7 +259,7 @@
                 if (isEventToday(rawInicio) && salaRaw) {
                     let salaKey = "";
                     
-                    // Enrutamiento definitivo basado en la columna Title de tu lista
+                    // Enrutamos basándonos en la columna Title (que tiene el nombre físico de la sala)
                     if (salaRaw.includes("directorio") || salaRaw.includes("junta") || salaRaw.includes("directiva")) {
                         salaKey = "Sala Junta Directiva";
                     } else if (salaRaw.includes("sala 1") || salaRaw.endsWith(" 1")) {
@@ -274,7 +276,7 @@
 
                         salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
-                            title: asuntoReunion, 
+                            title: asuntoReunion, // Aquí se inyecta el verdadero asunto (ej: "Reunión de coordinación")
                             startTime: horaInicioLimpia,
                             endTime: horaFinLimpia
                         });
@@ -282,7 +284,7 @@
                 }
             });
 
-            // Ordenar cronológicamente las actividades
+            // Ordenar por horario cronológico
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
