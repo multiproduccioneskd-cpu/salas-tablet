@@ -212,7 +212,7 @@
         }
 
         function processSharepointData(items) {
-            // Estructura limpia de los paneles físicos
+            // Estructura limpia de los paneles del Visor General
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", isDirectorio: true, agenda: [] },
                 "Sala 1": { displayName: "Sala 1", isDirectorio: false, agenda: [] },
@@ -224,49 +224,29 @@
                 const fields = item.fields;
                 if (!fields) return;
 
-                // Title contiene el lugar físico ("Sala 1", "Sala 2", etc.)
-                const salaRaw = String(fields.Title || "").toLowerCase(); 
+                // CORRECCIÓN CLAVE DE ASIGNACIÓN BASADA EN TU CAPTURA DE SHAREPOINT:
+                // 1. La columna 'Sala' define el lugar físico destino
+                const columnaSalaRaw = String(fields.Sala || "").toLowerCase(); 
                 const rawInicio = fields.HoraInicio;
                 const rawFin = fields.HoraFin;
 
-                // CAPTURA DIRECTA Y EXCLUSIVA DEL ASUNTO DE LA REUNIÓN
-                // Forzamos que lea la columna "Asunto" para el cuerpo interno de la tarjeta
-                let asuntoReunion = parseField(fields.Asunto || fields.asunto);
-
-                // Si no viene la columna "Asunto", hace un barrido de emergencia ignorando IDs
-                if (!asuntoReunion) {
-                    for (let key in fields) {
-                        const keyLower = key.toLowerCase();
-                        if (keyLower.includes('title') || keyLower.includes('hora') || keyLower.includes('id') || keyLower.includes('author') || keyLower.includes('editor') || keyLower.includes('odata')) {
-                            continue;
-                        }
-                        const valorLimpio = parseField(fields[key]).trim();
-                        const esCodigoRaro = valorLimpio.includes('-') && valorLimpio.length > 20;
-                        const tieneEstructuraId = valorLimpio.includes(',') || /^[0-9]+$/.test(valorLimpio);
-
-                        if (valorLimpio && valorLimpio.length > 2 && !esCodigoRaro && !tieneEstructuraId) {
-                            asuntoReunion = valorLimpio;
-                            break;
-                        }
-                    }
+                // 2. Definición del nombre de la reunión: prioridad columna 'Asunto', respaldo columna 'Title'
+                let nombreDeLaReunion = parseField(fields.Asunto || fields.asunto).trim();
+                if (!nombreDeLaReunion) {
+                    nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
                 }
 
-                // Respaldo final si el campo está completamente en blanco en SharePoint
-                if (!asuntoReunion) {
-                    asuntoReunion = "Reunión Reservada";
-                }
-
-                if (isEventToday(rawInicio) && salaRaw) {
+                if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     
-                    // Enrutamos basándonos en la columna Title (que tiene el nombre físico de la sala)
-                    if (salaRaw.includes("directorio") || salaRaw.includes("junta") || salaRaw.includes("directiva")) {
+                    // Enrutamos estrictamente usando el texto de la columna "Sala" de SharePoint
+                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio")) {
                         salaKey = "Sala Junta Directiva";
-                    } else if (salaRaw.includes("sala 1") || salaRaw.endsWith(" 1")) {
+                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1")) {
                         salaKey = "Sala 1";
-                    } else if (salaRaw.includes("sala 2") || salaRaw.endsWith(" 2")) {
+                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2")) {
                         salaKey = "Sala 2";
-                    } else if (salaRaw.includes("sala 3") || salaRaw.endsWith(" 3")) {
+                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3")) {
                         salaKey = "Sala 3";
                     }
 
@@ -276,7 +256,7 @@
 
                         salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
-                            title: asuntoReunion, // Aquí se inyecta el verdadero asunto (ej: "Reunión de coordinación")
+                            title: nombreDeLaReunion, // Aquí va el Asunto o el Título real de la actividad
                             startTime: horaInicioLimpia,
                             endTime: horaFinLimpia
                         });
@@ -284,7 +264,7 @@
                 }
             });
 
-            // Ordenar por horario cronológico
+            // Ordenar las reuniones cronológicamente de mañana a tarde
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
