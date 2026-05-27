@@ -13,7 +13,6 @@
         }
 
         body {
-            /* CORREGIDO: Cambiado de .jpg a .png para que coincida exactamente con tu GitHub */
             background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png');
             background-size: cover;
             background-position: center;
@@ -153,9 +152,7 @@
         </div>
     </div>
 
-    <div class="rooms-grid" id="roomsContainer">
-        <div class="no-meetings" style="color: white; width: 100%; text-align: center;">Cargando paneles informativos...</div>
-    </div>
+    <div class="rooms-grid" id="roomsContainer"></div>
 
     <div>
         <div class="brand-bar">
@@ -169,12 +166,32 @@
     <script>
         let salasMapeadas = {};
 
-        function parseField(value) {
-            if (!value) return "";
-            if (typeof value === 'object') {
-                return value.Value || value.Label || value.DisplayName || JSON.stringify(value);
+        // Convierte las cadenas ISO de Microsoft Graph a formato local "HH:MM" de 24 horas
+        function formatISODateToHHMM(isoString) {
+            if (!isoString) return "00:00";
+            try {
+                const dateObj = new Date(isoString);
+                // Extrae hora y minutos locales basándose en la zona horaria de la tablet
+                const hours = String(dateObj.getHours()).padStart(2, '0');
+                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            } catch (e) {
+                return "00:00";
             }
-            return String(value);
+        }
+
+        // Evalúa si una fecha ISO corresponde al día de hoy en hora local
+        function isEventToday(isoString) {
+            if (!isoString) return false;
+            try {
+                const eventDate = new Date(isoString);
+                const today = new Date();
+                return eventDate.getDate() === today.getDate() &&
+                       eventDate.getMonth() === today.getMonth() &&
+                       eventDate.getFullYear() === today.getFullYear();
+            } catch (e) {
+                return false;
+            }
         }
 
         async function fetchSalasFromAPI() {
@@ -182,22 +199,16 @@
                 const response = await fetch('/api/salas');
                 const data = await response.json();
                 
-                // Forzamos la impresión del objeto completo pase lo que pase
-                console.log(">>> RESPUESTA CRUDA DE LA API VERCEL:", data);
-
                 if (data && data.value) {
                     processSharepointData(data.value);
-                } else {
-                    console.log("Alerta: Estructura sin propiedad 'value'.");
-                    renderDashboard(); 
                 }
             } catch (error) {
-                console.error("Error crítico de red en fetch:", error);
-                renderDashboard();
+                console.error("Error al conectar con la API interna:", error);
             }
         }
 
         function processSharepointData(items) {
+            // Inicializar las 4 casillas con el mapeo correcto
             salasMapeadas = {
                 "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
                 "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
@@ -205,61 +216,53 @@
                 "Sala de Reuniones 4": { displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
             };
 
-            const hoy = new Date();
-            const yyyy = hoy.getFullYear();
-            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-            const dd = String(hoy.getDate()).padStart(2, '0');
-            const fechaHoyStr = `${yyyy}-${mm}-${dd}`;
-
             items.forEach((item, index) => {
                 const fields = item.fields;
                 if (!fields) return;
 
-                // Esto imprimirá de forma limpia cada elemento en la pestaña Consola
-                console.log(`Campos del registro [${index}]:`, fields);
+                // Datos mapeados directo desde tu captura de consola
+                const salaRaw = String(fields.Title || "").toLowerCase(); // ej: "sala 123"
+                const rawInicio = fields.HoraInicio; // ej: "2026-05-28T16:00:00Z"
+                const rawFin = fields.HoraFin;
 
-                const tituloReunion = parseField(fields.Title) || "Reunión";
-                const organo = parseField(fields.Organiza || fields.Editor) || "UGM";
-                const horaInicio = parseField(fields.HoraInicio) || "00:00";
-                const horaFin = parseField(fields.HoraFin) || "00:00";
-                
-                let nombreSalaDestino = "";
-                for (let key in fields) {
-                    const valStr = parseField(fields[key]);
-                    if (valStr.includes("Sala de") || valStr.includes("Directorio")) {
-                        nombreSalaDestino = valStr;
-                        break;
+                // FILTRO: Evaluamos si el bloque corresponde al día de hoy en hora local de Chile
+                if (isEventToday(rawInicio) && salaRaw) {
+                    
+                    // Enrutamiento inteligente basado en tu SharePoint
+                    let salaKey = "";
+                    if (salaRaw.includes("directorio") || salaRaw.includes("1")) {
+                        salaKey = "Sala de Directorio";
+                    } else if (salaRaw.includes("2")) {
+                        salaKey = "Sala de Reuniones 2";
+                    } else if (salaRaw.includes("3")) {
+                        salaKey = "Sala de Reuniones 3";
+                    } else if (salaRaw.includes("4")) {
+                        salaKey = "Sala de Reuniones 4";
+                    } else {
+                        // Respaldo secuencial si escriben solo números en SharePoint
+                        if (salaRaw.includes("123")) salaKey = "Sala de Directorio";
+                        else if (salaRaw.includes("456")) salaKey = "Sala de Reuniones 2";
+                        else if (salaRaw.includes("789")) salaKey = "Sala de Reuniones 3";
+                        else if (salaRaw.includes("100")) salaKey = "Sala de Reuniones 4";
                     }
-                }
 
-                let fechaReunionRaw = "";
-                for (let key in fields) {
-                    const valStr = parseField(fields[key]);
-                    if (valStr.startsWith("202") && valStr.includes("-")) {
-                        fechaReunionRaw = valStr;
-                        break;
-                    }
-                }
+                    // Si calza con las tarjetas, procesamos las horas locales limpias
+                    if (salaKey && salasMapeadas[salaKey]) {
+                        const horaInicioLimpia = formatISODateToHHMM(rawInicio);
+                        const horaFinLimpia = formatISODateToHHMM(rawFin);
 
-                if (fechaReunionRaw.includes(fechaHoyStr) && nombreSalaDestino) {
-                    let salaKey = "Sala de Reuniones 2";
-                    if (nombreSalaDestino.includes("Directorio")) salaKey = "Sala de Directorio";
-                    else if (nombreSalaDestino.includes("2")) salaKey = "Sala de Reuniones 2";
-                    else if (nombreSalaDestino.includes("3")) salaKey = "Sala de Reuniones 3";
-                    else if (nombreSalaDestino.includes("4")) salaKey = "Sala de Reuniones 4";
-
-                    if (salasMapeadas[salaKey]) {
                         salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
-                            title: tituloReunion,
-                            org: organo,
-                            startTime: horaInicio,
-                            endTime: horaFin
+                            title: `Reunión Programada (${fields.Title})`, // Agrega el identificador del Title
+                            org: fields.Organiza || "Institucional",
+                            startTime: horaInicioLimpia,
+                            endTime: horaFinLimpia
                         });
                     }
                 }
             });
 
+            // Ordenar por hora cronológica de mañana a tarde
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -272,8 +275,6 @@
             if (!container) return;
             
             let gridHTML = "";
-
-            // Si la API no ha poblado datos todavía, mostramos el cascarón inicial vacío
             const salasAListar = Object.keys(salasMapeadas).length > 0 ? salasMapeadas : {
                 "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
                 "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
@@ -375,10 +376,10 @@
         
         window.onload = function() {
             updateLiveDateTime();
-            renderDashboard(); // Asegura el dibujo del cascarón al tiro
+            renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 15000);
+            setInterval(fetchSalasFromAPI, 20000); // Sincroniza cada 20 segundos
         };
     </script>
 </body>
