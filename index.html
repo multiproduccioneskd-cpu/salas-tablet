@@ -164,8 +164,7 @@
     </div>
 
     <script>
-        // MAPEO DE SALAS CONECTADO A SHAREPOINT
-        // Nota: Asegúrate de ajustar los strings "displayName" para que calcen con cómo se llaman en tu Sharepoint.
+        // LISTA DE SALAS OFICIALES REQUERIDAS
         let salasUGM = [
             { id: "s-dir", displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
             { id: "s-re2", displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
@@ -173,7 +172,6 @@
             { id: "s-re4", displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
         ];
 
-        // 1. CONSUMIR DATOS DESDE NUESTRO BACKEND SEGURO EN VERCEL
         async function fetchSalasFromAPI() {
             try {
                 const response = await fetch('/api/salas');
@@ -181,43 +179,69 @@
                 
                 if (data && data.value) {
                     processSharepointData(data.value);
+                } else {
+                    console.log("La API no retornó el formato 'value' esperado:", data);
                 }
             } catch (error) {
                 console.error("Error cargando agendas de Microsoft Graph:", error);
             }
         }
 
-        // 2. PROCESAR E INYECTAR LA DATA DE SHAREPOINT EN EL DASHBOARD
         function processSharepointData(items) {
-            // Limpiar agendas anteriores antes de mapear lo nuevo
+            // Reiniciar agendas antiguas
             salasUGM.forEach(s => s.agenda = []);
 
             const hoy = new Date();
             const yyyy = hoy.getFullYear();
             const mm = String(hoy.getMonth() + 1).padStart(2, '0');
             const dd = String(hoy.getDate()).padStart(2, '0');
-            const fechaHoyStr = `${yyyy}-${mm}-${dd}`; // Formato YYYY-MM-DD
+            const fechaHoyStr = `${yyyy}-${mm}-${dd}`;
 
             items.forEach((item, index) => {
                 const fields = item.fields;
                 if (!fields) return;
 
-                // Extraemos las variables según las columnas típicas de Sharepoint
-                // AJUSTAR AQUÍ si tus nombres de columna cambian (ej: fields.Title, fields.Organiza, etc.)
-                const tituloReunion = fields.Title || "Reunión Sin Título";
-                const organo = fields.Organiza || fields.Author || "Institucional";
-                const nombreSalaDestino = fields.Sala || ""; 
-                const horaInicio = fields.HoraInicio || "00:00"; // Formato esperado "HH:MM"
-                const horaFin = fields.HoraFin || "00:00";
-                const fechaReunion = fields.Fecha || ""; // Esperado "YYYY-MM-DD"
+                // MIRA AQUÍ: Esto imprimirá en la consola de la tablet todas las columnas disponibles de Sharepoint
+                console.log("Estructura interna detectada en Sharepoint:", fields);
 
-                // FILTRO 1: Que la reunión pertenezca estrictamente al día de hoy
-                if (fechaReunion.startsWith(fechaHoyStr) || fechaReunion === fechaHoyStr) {
+                // CAPTURA FLEXIBLE DE DATOS POR SI CAMBIAN LOS NOMBRES TÉCNICOS
+                const tituloReunion = fields.Title || fields.LinkTitle || "Reunión Sin Título";
+                const organo = fields.Organiza || fields.Organizador || fields.AuthorLookupId || "Institucional";
+                
+                // Mapeo dinámico para capturar el nombre de la sala sin importar si tiene prefijos o espacios codificados
+                let nombreSalaDestino = "";
+                Object.keys(fields).forEach(key => {
+                    if (key.toLowerCase().includes('sala') || key.toLowerCase().includes('calendar')) {
+                        nombreSalaDestino = String(fields[key]);
+                    }
+                });
+                
+                // Si la búsqueda anterior no falló y detectó texto vacío, probamos con alternativas genéricas
+                if (!nombreSalaDestino) {
+                    nombreSalaDestino = fields.Sala || fields.NombreSala || fields.Location || "";
+                }
+
+                const horaInicio = fields.HoraInicio || fields.Hora_x0020_Inicio || "00:00"; 
+                const horaFin = fields.HoraFin || fields.Hora_x0020_Fin || "00:00";
+                
+                // Buscar cualquier propiedad que parezca fecha
+                let fechaReunion = fields.Fecha || fields.FechaReunion || "";
+                Object.keys(fields).forEach(key => {
+                    if (key.toLowerCase() === 'fecha') {
+                        fechaReunion = fields[key];
+                    }
+                });
+
+                // Validación estricta del día de hoy
+                if (fechaReunion && (fechaReunion.startsWith(fechaHoyStr) || fechaReunion === fechaHoyStr)) {
                     
-                    // Buscamos a qué sala corresponde en nuestro arreglo de la pantalla
-                    const salaEncontrada = salasUGM.find(s => nombreSalaDestino.toLowerCase().includes(s.displayName.toLowerCase()));
+                    // Buscamos coincidencia de texto dentro de nuestra lista fija
+                    const salaEncontrada = salasUGM.find(s => 
+                        nombreSalaDestino.toLowerCase().trim().includes(s.displayName.toLowerCase().trim()) || 
+                        s.displayName.toLowerCase().trim().includes(nombreSalaDestino.toLowerCase().trim())
+                    );
                     
-                    if (salaEncontrada) {
+                    if (salaEncontrada && nombreSalaDestino !== "") {
                         salaEncontrada.agenda.push({
                             idMeet: `sp-${index}`,
                             title: tituloReunion,
@@ -229,16 +253,14 @@
                 }
             });
 
-            // Ordenar las reuniones de cada sala cronológicamente por hora de inicio
+            // Ordenamiento por hora
             salasUGM.forEach(sala => {
                 sala.agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
 
-            // Pintar la interfaz actualizada
             renderDashboard();
         }
 
-        // 3. RENDERIZAR LA INTERFAZ EN EL GRID HTML
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
             let gridHTML = "";
@@ -281,7 +303,6 @@
             container.innerHTML = gridHTML;
         }
 
-        // 4. LÓGICA AUTOMÁTICA DE FADE-OUT PASADOS 20 MINUTOS
         function checkMeetingsExpiration() {
             const now = new Date();
             const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
@@ -292,7 +313,6 @@
                     const [startHour, startMin] = meet.startTime.split(':').map(Number);
                     const startMinutesTotal = (startHour * 60) + startMin;
 
-                    // Si pasaron 20 minutos de la hora de inicio, gatillar la animación
                     if (currentMinutesTotal >= (startMinutesTotal + 20)) {
                         const element = document.getElementById(`meet-${meet.idMeet}`);
                         
@@ -335,10 +355,10 @@
         
         window.onload = function() {
             updateLiveDateTime();
-            fetchSalasFromAPI(); // Carga inicial desde Sharepoint
+            fetchSalasFromAPI();
             
-            setInterval(updateLiveDateTime, 1000); // Reloj y borrado cada 1 segundo
-            setInterval(fetchSalasFromAPI, 300000); // Sincroniza con Sharepoint cada 5 minutos automáticamente
+            setInterval(updateLiveDateTime, 1000);
+            setInterval(fetchSalasFromAPI, 300000); // 5 Minutos
         };
     </script>
 </body>
