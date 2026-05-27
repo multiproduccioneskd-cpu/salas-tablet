@@ -115,8 +115,7 @@
         .meeting-time { min-width: 95px; }
         .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; text-align: center; }
         .meeting-details { flex-grow: 1; padding-left: 15px; }
-        .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; margin-bottom: 2px; }
-        .meeting-info { font-size: 12px; color: #718096; }
+        .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; }
 
         .meeting-item.fade-out {
             opacity: 0;
@@ -166,12 +165,10 @@
     <script>
         let salasMapeadas = {};
 
-        // Convierte las cadenas ISO de Microsoft Graph a formato local "HH:MM" de 24 horas
         function formatISODateToHHMM(isoString) {
             if (!isoString) return "00:00";
             try {
                 const dateObj = new Date(isoString);
-                // Extrae hora y minutos locales basándose en la zona horaria de la tablet
                 const hours = String(dateObj.getHours()).padStart(2, '0');
                 const minutes = String(dateObj.getMinutes()).padStart(2, '0');
                 return `${hours}:${minutes}`;
@@ -180,7 +177,6 @@
             }
         }
 
-        // Evalúa si una fecha ISO corresponde al día de hoy en hora local
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
@@ -192,6 +188,14 @@
             } catch (e) {
                 return false;
             }
+        }
+
+        function parseField(value) {
+            if (!value) return "";
+            if (typeof value === 'object') {
+                return value.Value || value.Label || value.DisplayName || JSON.stringify(value);
+            }
+            return String(value);
         }
 
         async function fetchSalasFromAPI() {
@@ -208,53 +212,64 @@
         }
 
         function processSharepointData(items) {
-            // Inicializar las 4 casillas con el mapeo correcto
+            // NUEVOS NOMBRES OFICIALES DE TUS SALAS
             salasMapeadas = {
-                "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
-                "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
-                "Sala de Reuniones 3": { displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
-                "Sala de Reuniones 4": { displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
+                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", isDirectorio: true, agenda: [] },
+                "Sala 1": { displayName: "Sala 1", isDirectorio: false, agenda: [] },
+                "Sala 2": { displayName: "Sala 2", isDirectorio: false, agenda: [] },
+                "Sala 3": { displayName: "Sala 3", isDirectorio: false, agenda: [] }
             };
 
             items.forEach((item, index) => {
                 const fields = item.fields;
                 if (!fields) return;
 
-                // Datos mapeados directo desde tu captura de consola
-                const salaRaw = String(fields.Title || "").toLowerCase(); // ej: "sala 123"
-                const rawInicio = fields.HoraInicio; // ej: "2026-05-28T16:00:00Z"
+                const salaRaw = String(fields.Title || "").toLowerCase(); 
+                const rawInicio = fields.HoraInicio;
                 const rawFin = fields.HoraFin;
 
-                // FILTRO: Evaluamos si el bloque corresponde al día de hoy en hora local de Chile
+                // ESCANEO INTELIGENTE DEL TÍTULO REAL DE LA REUNIÓN
+                // Busca columnas de texto alternas en el JSON para no duplicar el nombre de la sala
+                let tituloReunion = "";
+                const llavesIgnorar = ['title', 'horainicio', 'horafin', 'id', 'modified', 'created', 'author', 'editor', 'attachments'];
+                
+                for (let key in fields) {
+                    if (!llavesIgnorar.some(ignored => key.toLowerCase().includes(ignored))) {
+                        const valStr = parseField(fields[key]);
+                        // Si encontramos un texto descriptivo largo que no sea la palabra sala pura, lo tomamos como título
+                        if (valStr && valStr.length > 3 && !valStr.toLowerCase().includes('sala ')) {
+                            tituloReunion = valStr;
+                            break;
+                        }
+                    }
+                }
+
+                // Si no pilla un asunto extra en las columnas, le dejamos un nombre limpio por defecto
+                if (!tituloReunion) {
+                    tituloReunion = "Reunión de Coordinación";
+                }
+
                 if (isEventToday(rawInicio) && salaRaw) {
-                    
-                    // Enrutamiento inteligente basado en tu SharePoint
                     let salaKey = "";
-                    if (salaRaw.includes("directorio") || salaRaw.includes("1")) {
-                        salaKey = "Sala de Directorio";
-                    } else if (salaRaw.includes("2")) {
-                        salaKey = "Sala de Reuniones 2";
-                    } else if (salaRaw.includes("3")) {
-                        salaKey = "Sala de Reuniones 3";
-                    } else if (salaRaw.includes("4")) {
-                        salaKey = "Sala de Reuniones 4";
-                    } else {
-                        // Respaldo secuencial si escriben solo números en SharePoint
-                        if (salaRaw.includes("123")) salaKey = "Sala de Directorio";
-                        else if (salaRaw.includes("456")) salaKey = "Sala de Reuniones 2";
-                        else if (salaRaw.includes("789")) salaKey = "Sala de Reuniones 3";
-                        else if (salaRaw.includes("100")) salaKey = "Sala de Reuniones 4";
+                    
+                    // Enrutamiento adaptado a tus nuevas 4 salas
+                    if (salaRaw.includes("directorio") || salaRaw.includes("junta") || salaRaw.includes("123")) {
+                        salaKey = "Sala Junta Directiva";
+                    } else if (salaRaw.includes("sala 1") || salaRaw.includes("456")) {
+                        salaKey = "Sala 1";
+                    } else if (salaRaw.includes("sala 2") || salaRaw.includes("789")) {
+                        salaKey = "Sala 2";
+                    } else if (salaRaw.includes("sala 3") || salaRaw.includes("100")) {
+                        salaKey = "Sala 3";
                     }
 
-                    // Si calza con las tarjetas, procesamos las horas locales limpias
                     if (salaKey && salasMapeadas[salaKey]) {
                         const horaInicioLimpia = formatISODateToHHMM(rawInicio);
                         const horaFinLimpia = formatISODateToHHMM(rawFin);
 
                         salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
-                            title: `Reunión Programada (${fields.Title})`, // Agrega el identificador del Title
-                            org: fields.Organiza || "Institucional",
+                            title: tituloReunion, // Asignamos el título real extraído
                             startTime: horaInicioLimpia,
                             endTime: horaFinLimpia
                         });
@@ -262,7 +277,6 @@
                 }
             });
 
-            // Ordenar por hora cronológica de mañana a tarde
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -276,10 +290,10 @@
             
             let gridHTML = "";
             const salasAListar = Object.keys(salasMapeadas).length > 0 ? salasMapeadas : {
-                "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
-                "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
-                "Sala de Reuniones 3": { displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
-                "Sala de Reuniones 4": { displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
+                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", isDirectorio: true, agenda: [] },
+                "Sala 1": { displayName: "Sala 1", isDirectorio: false, agenda: [] },
+                "Sala 2": { displayName: "Sala 2", isDirectorio: false, agenda: [] },
+                "Sala 3": { displayName: "Sala 3", isDirectorio: false, agenda: [] }
             };
 
             Object.keys(salasAListar).forEach(key => {
@@ -308,7 +322,6 @@
                                 </div>
                                 <div class="meeting-details">
                                     <div class="meeting-title">${meet.title}</div>
-                                    <div class="meeting-info">Organiza: ${meet.org}</div>
                                 </div>
                             </div>
                         `;
@@ -379,7 +392,7 @@
             renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 20000); // Sincroniza cada 20 segundos
+            setInterval(fetchSalasFromAPI, 20000);
         };
     </script>
 </body>
