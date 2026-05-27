@@ -152,7 +152,9 @@
         </div>
     </div>
 
-    <div class="rooms-grid" id="roomsContainer"></div>
+    <div class="rooms-grid" id="roomsContainer">
+        <div class="no-meetings" style="color: white;">Conectando con la agenda de SharePoint...</div>
+    </div>
 
     <div>
         <div class="brand-bar">
@@ -164,21 +166,15 @@
     </div>
 
     <script>
-        // LISTA DE SALAS OBJETIVO
-        let salasUGM = [
-            { id: "s-dir", displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
-            { id: "s-re2", displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
-            { id: "s-re3", displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
-            { id: "s-re4", displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
-        ];
+        // Estructura maestra que guardará los datos procesados de SharePoint
+        let salasMapeadas = {};
 
-        // Función para limpiar o extraer strings si vienen como objetos desde SharePoint
-        function parseSharepointField(fieldValue) {
-            if (!fieldValue) return "";
-            if (typeof fieldValue === 'object') {
-                return fieldValue.Value || fieldValue.Label || fieldValue.TermGuid || JSON.stringify(fieldValue);
+        function parseField(value) {
+            if (!value) return "";
+            if (typeof value === 'object') {
+                return value.Value || value.Label || value.DisplayName || JSON.stringify(value);
             }
-            return String(fieldValue);
+            return String(value);
         }
 
         async function fetchSalasFromAPI() {
@@ -188,69 +184,68 @@
                 
                 if (data && data.value) {
                     processSharepointData(data.value);
-                } else {
-                    console.log("Respuesta sin array 'value':", data);
                 }
             } catch (error) {
-                console.error("Error cargando agendas de Microsoft Graph:", error);
+                console.error("Error al conectar con la API interna:", error);
             }
         }
 
         function processSharepointData(items) {
-            // Vaciar agendas
-            salasUGM.forEach(s => s.agenda = []);
+            // Reiniciar el contenedor dinámico
+            salasMapeadas = {
+                "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
+                "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
+                "Sala de Reuniones 3": { displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
+                "Sala de Reuniones 4": { displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
+            };
 
             const hoy = new Date();
             const yyyy = hoy.getFullYear();
             const mm = String(hoy.getMonth() + 1).padStart(2, '0');
             const dd = String(hoy.getDate()).padStart(2, '0');
-            const fechaHoyStr = `${yyyy}-${mm}-${dd}`; // "YYYY-MM-DD"
+            const fechaHoyStr = `${yyyy}-${mm}-${dd}`;
 
             items.forEach((item, index) => {
                 const fields = item.fields;
                 if (!fields) return;
 
-                console.log(`Elemento [${index}] campos brutos:`, fields);
-
-                // 1. EXTRAER TÍTULO Y ORGANIZADOR DE FORMA SEGURA
-                const tituloReunion = parseSharepointField(fields.Title || fields.LinkTitle) || "Reunión Sin Título";
-                const organo = parseSharepointField(fields.Organiza || fields.Organizador || fields.AuthorLookupId) || "Institucional";
-                const horaInicio = parseSharepointField(fields.HoraInicio || fields.Hora_x0020_Inicio) || "00:00"; 
-                const horaFin = parseSharepointField(fields.HoraFin || fields.Hora_x0020_Fin) || "00:00";
-
-                // 2. DETECTAR EL CAMPO DE LA SALA DINÁMICAMENTE
+                // Captura directa usando las keys nativas de tu script de pruebas
+                const tituloReunion = parseField(fields.Title) || "Reunión";
+                const organo = parseField(fields.Organiza || fields.Editor) || "UGM";
+                const horaInicio = parseField(fields.HoraInicio) || "00:00";
+                const horaFin = parseField(fields.HoraFin) || "00:00";
+                
+                // Buscar la columna de la sala dinámicamente analizando los valores dentro del JSON
                 let nombreSalaDestino = "";
-                Object.keys(fields).forEach(key => {
-                    const keyLower = key.toLowerCase();
-                    if (keyLower.includes('sala') || keyLower.includes('room') || keyLower.includes('calendar') || keyLower.includes('ubicacion') || keyLower.includes('location')) {
-                        nombreSalaDestino = parseSharepointField(fields[key]);
+                for (let key in fields) {
+                    const valStr = parseField(fields[key]);
+                    if (valStr.includes("Sala de") || valStr.includes("Directorio")) {
+                        nombreSalaDestino = valStr;
+                        break;
                     }
-                });
-
-                // 3. DETECTAR EL CAMPO DE FECHA DINÁMICAMENTE
-                let fechaReunionRaw = "";
-                Object.keys(fields).forEach(key => {
-                    if (key.toLowerCase().includes('fecha') || key.toLowerCase() === 'eventdate' || key.toLowerCase() === 'startdate') {
-                        fechaReunionRaw = parseSharepointField(fields[key]);
-                    }
-                });
-
-                // Si viene vacía la fecha del barrido, intentamos mapeos directos estándar
-                if (!fechaReunionRaw) {
-                    fechaReunionRaw = parseSharepointField(fields.Fecha || fields.FechaReunion);
                 }
 
-                // VALIDACIÓN: Comprobamos si la fecha de la reunión contiene el día de hoy (ej: "2026-05-27T10:00:00Z" incluye "2026-05-27")
-                if (fechaReunionRaw && fechaReunionRaw.includes(fechaHoyStr)) {
-                    
-                    // Cruce con nuestra lista de salas en la pantalla
-                    const salaEncontrada = salasUGM.find(s => 
-                        nombreSalaDestino.toLowerCase().trim().includes(s.displayName.toLowerCase().trim()) || 
-                        s.displayName.toLowerCase().trim().includes(nombreSalaDestino.toLowerCase().trim())
-                    );
-                    
-                    if (salaEncontrada && nombreSalaDestino !== "") {
-                        salaEncontrada.agenda.push({
+                // Buscar la columna fecha analizando si tiene guiones de formato ISO
+                let fechaReunionRaw = "";
+                for (let key in fields) {
+                    const valStr = parseField(fields[key]);
+                    if (valStr.startsWith("202") && valStr.includes("-")) {
+                        fechaReunionRaw = valStr;
+                        break;
+                    }
+                }
+
+                // Si cae en el día de hoy, realizamos el empuje a la agenda correspondiente
+                if (fechaReunionRaw.includes(fechaHoyStr) && nombreSalaDestino) {
+                    // Normalizamos llaves para evitar errores de espacios o mayúsculas
+                    let salaKey = "Sala de Reuniones 2";
+                    if (nombreSalaDestino.includes("Directorio")) salaKey = "Sala de Directorio";
+                    else if (nombreSalaDestino.includes("2")) salaKey = "Sala de Reuniones 2";
+                    else if (nombreSalaDestino.includes("3")) salaKey = "Sala de Reuniones 3";
+                    else if (nombreSalaDestino.includes("4")) salaKey = "Sala de Reuniones 4";
+
+                    if (salasMapeadas[salaKey]) {
+                        salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
                             title: tituloReunion,
                             org: organo,
@@ -261,9 +256,9 @@
                 }
             });
 
-            // Ordenar por hora
-            salasUGM.forEach(sala => {
-                sala.agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
+            // Ordenar cronológicamente y pintar
+            Object.keys(salasMapeadas).forEach(key => {
+                salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
 
             renderDashboard();
@@ -273,7 +268,8 @@
             const container = document.getElementById('roomsContainer');
             let gridHTML = "";
 
-            salasUGM.forEach(sala => {
+            Object.keys(salasMapeadas).forEach(key => {
+                const sala = salasMapeadas[key];
                 const cardClass = sala.isDirectorio ? "room-card directorio-style" : "room-card";
                 const totalReuniones = sala.agenda.length;
                 const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
@@ -282,13 +278,13 @@
                     <div class="${cardClass}">
                         <div class="room-title-bar">
                             <span class="room-name">${sala.displayName}</span>
-                            <span class="event-count" id="count-${sala.id}">${countText}</span>
+                            <span class="event-count" id="count-${key}">${countText}</span>
                         </div>
-                        <div class="meetings-list" id="list-${sala.id}">
+                        <div class="meetings-list" id="list-${key}">
                 `;
 
                 if (totalReuniones === 0) {
-                    gridHTML += `<div class="no-meetings" id="empty-${sala.id}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                    gridHTML += `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
                 } else {
                     sala.agenda.forEach(meet => {
                         gridHTML += `
@@ -312,22 +308,20 @@
         }
 
         function checkMeetingsExpiration() {
-            const now = new Date();
-            const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
+            Object.keys(salasMapeadas).forEach(key => {
+                const sala = salasMapeadas[key];
+                const now = new Date();
+                const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
 
-            salasUGM.forEach(sala => {
                 for (let i = sala.agenda.length - 1; i >= 0; i--) {
                     const meet = sala.agenda[i];
-                    // Asegurar que procesamos solo HH:MM limpios
-                    const cleanTime = meet.startTime.split(' ')[0]; 
-                    const [startHour, startMin] = cleanTime.split(':').map(Number);
+                    const [startHour, startMin] = meet.startTime.split(':').map(Number);
                     
                     if (!isNaN(startHour) && !isNaN(startMin)) {
                         const startMinutesTotal = (startHour * 60) + startMin;
 
                         if (currentMinutesTotal >= (startMinutesTotal + 20)) {
                             const element = document.getElementById(`meet-${meet.idMeet}`);
-                            
                             if (element && !element.classList.contains('fade-out')) {
                                 element.classList.add('fade-out');
 
@@ -336,12 +330,12 @@
                                     element.remove();
                                     
                                     const total = sala.agenda.length;
-                                    document.getElementById(`count-${sala.id}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
+                                    document.getElementById(`count-${key}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
                                     
                                     if (total === 0) {
-                                        const listContainer = document.getElementById(`list-${sala.id}`);
-                                        if (listContainer && !document.getElementById(`empty-${sala.id}`)) {
-                                            listContainer.innerHTML = `<div class="no-meetings" id="empty-${sala.id}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                                        const listContainer = document.getElementById(`list-${key}`);
+                                        if (listContainer) {
+                                            listContainer.innerHTML = `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
                                         }
                                     }
                                 }, 800);
@@ -354,11 +348,9 @@
 
         function updateLiveDateTime() {
             const now = new Date();
-            
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             let dateStr = now.toLocaleDateString('es-CL', dateOptions);
-            dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-            document.getElementById('liveDate').innerText = dateStr;
+            document.getElementById('liveDate').innerText = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
             document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', timeOptions);
@@ -369,9 +361,8 @@
         window.onload = function() {
             updateLiveDateTime();
             fetchSalasFromAPI();
-            
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 300000); // Actualiza cada 5 min de SharePoint
+            setInterval(fetchSalasFromAPI, 10000); // Forzado cada 10 segundos para ver cambios al tiro
         };
     </script>
 </body>
