@@ -220,14 +220,10 @@
                 const fields = item.fields;
                 if (!fields) return;
 
-                // 1. BUSCAR SALA A PRUEBA DE BALAS
-                let columnaSalaRaw = String(fields.Sala || fields.Location || "").toLowerCase().trim();
-                if (!columnaSalaRaw) {
-                    // Si dejaron "Sala" vacío, busca en el Title
-                    columnaSalaRaw = String(fields.Title || fields.LinkTitle || "").toLowerCase().trim();
-                }
+                // 1. DÓNDE SE HACE (SALA)
+                const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
 
-                // 2. BUSCAR FECHAS/HORAS A PRUEBA DE BALAS
+                // 2. HORARIOS
                 let rawInicio = fields.HoraInicio || fields.EventDate || fields.Start || "";
                 let rawFin = fields.HoraFin || fields.EndDate || fields.End || "";
                 
@@ -235,34 +231,18 @@
                     for (let key in fields) {
                         const val = String(fields[key]);
                         const k = key.toLowerCase();
-                        if (val.includes('T') && val.includes('Z')) { // Formato fecha de SharePoint
+                        if (val.includes('T') && val.includes('Z')) { 
                             if (k.includes('inicio') || k.includes('start')) rawInicio = val;
                             if (k.includes('fin') || k.includes('end')) rawFin = val;
                         }
                     }
                 }
 
-                // 3. BUSCAR ASUNTO A PRUEBA DE BALAS
-                let nombreDeLaReunion = parseField(fields.Asunto || fields.asunto).trim();
+                // 3. NOMBRE DE LA REUNIÓN (TÍTULO) - Directo y sin adivinar
+                let nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
+                
                 if (!nombreDeLaReunion) {
-                    for (let key in fields) {
-                        const keyLower = key.toLowerCase();
-                        if (keyLower.includes('title') || keyLower.includes('hora') || keyLower.includes('id') || keyLower.includes('author') || keyLower.includes('editor') || keyLower.includes('odata') || keyLower.includes('sala') || keyLower.includes('location')) {
-                            continue;
-                        }
-                        const valorLimpio = parseField(fields[key]).trim();
-                        const esCodigoRaro = valorLimpio.includes('-') && valorLimpio.length > 20;
-                        const tieneEstructuraId = valorLimpio.includes(',') || /^[0-9]+$/.test(valorLimpio);
-
-                        if (valorLimpio && valorLimpio.length > 2 && !esCodigoRaro && !tieneEstructuraId) {
-                            nombreDeLaReunion = valorLimpio;
-                            break;
-                        }
-                    }
-                }
-                if (!nombreDeLaReunion) {
-                    // Respaldo final si no hay Asunto
-                    nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim() || "Reunión";
+                    nombreDeLaReunion = "Reunión Reservada";
                 }
 
                 // 4. ENRUTAMIENTO (Solo si es hoy)
