@@ -193,7 +193,7 @@
         function parseField(value) {
             if (!value) return "";
             if (typeof value === 'object') {
-                return value.Value || value.Label || value.DisplayName || JSON.stringify(value);
+                return value.Value || value.Label || value.DisplayName || value.TermLabel || JSON.stringify(value);
             }
             return String(value);
         }
@@ -212,7 +212,7 @@
         }
 
         function processSharepointData(items) {
-            // NUEVOS NOMBRES OFICIALES DE TUS SALAS
+            // Estructura limpia e institucional de tus cuatro salas
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", isDirectorio: true, agenda: [] },
                 "Sala 1": { displayName: "Sala 1", isDirectorio: false, agenda: [] },
@@ -228,38 +228,43 @@
                 const rawInicio = fields.HoraInicio;
                 const rawFin = fields.HoraFin;
 
-                // ESCANEO INTELIGENTE DEL TÍTULO REAL DE LA REUNIÓN
-                // Busca columnas de texto alternas en el JSON para no duplicar el nombre de la sala
-                let tituloReunion = "";
-                const llavesIgnorar = ['title', 'horainicio', 'horafin', 'id', 'modified', 'created', 'author', 'editor', 'attachments'];
+                // ASIGNACIÓN DIRECTA EXTRAÍDA DESDE LAS COLUMNAS DE SHAREPOINT
+                // Intentamos capturar 'Asunto', si no está, recorremos campos alternativos limpios
+                let asuntoReunion = parseField(fields.Asunto || fields.asunto);
                 
-                for (let key in fields) {
-                    if (!llavesIgnorar.some(ignored => key.toLowerCase().includes(ignored))) {
-                        const valStr = parseField(fields[key]);
-                        // Si encontramos un texto descriptivo largo que no sea la palabra sala pura, lo tomamos como título
-                        if (valStr && valStr.length > 3 && !valStr.toLowerCase().includes('sala ')) {
-                            tituloReunion = valStr;
+                if (!asuntoReunion) {
+                    for (let key in fields) {
+                        const keyLower = key.toLowerCase();
+                        if (keyLower.includes('title') || keyLower.includes('hora') || keyLower.includes('id') || keyLower.includes('author') || keyLower.includes('editor') || keyLower.includes('odata')) {
+                            continue;
+                        }
+                        const valorLimpio = parseField(fields[key]).trim();
+                        const esCodigoRaro = valorLimpio.includes('-') && valorLimpio.length > 20;
+                        const tieneEstructuraId = valorLimpio.includes(',') || /^[0-9]+$/.test(valorLimpio);
+
+                        if (valorLimpio && valorLimpio.length > 2 && !esCodigoRaro && !tieneEstructuraId) {
+                            asuntoReunion = valorLimpio;
                             break;
                         }
                     }
                 }
 
-                // Si no pilla un asunto extra en las columnas, le dejamos un nombre limpio por defecto
-                if (!tituloReunion) {
-                    tituloReunion = "Reunión de Coordinación";
+                // Respaldo estético si no viene especificado en la celda
+                if (!asuntoReunion) {
+                    asuntoReunion = "Reunión Reservada";
                 }
 
                 if (isEventToday(rawInicio) && salaRaw) {
                     let salaKey = "";
                     
-                    // Enrutamiento adaptado a tus nuevas 4 salas
-                    if (salaRaw.includes("directorio") || salaRaw.includes("junta") || salaRaw.includes("123")) {
+                    // Enrutamiento definitivo basado en la columna Title de tu lista
+                    if (salaRaw.includes("directorio") || salaRaw.includes("junta") || salaRaw.includes("directiva")) {
                         salaKey = "Sala Junta Directiva";
-                    } else if (salaRaw.includes("sala 1") || salaRaw.includes("456")) {
+                    } else if (salaRaw.includes("sala 1") || salaRaw.endsWith(" 1")) {
                         salaKey = "Sala 1";
-                    } else if (salaRaw.includes("sala 2") || salaRaw.includes("789")) {
+                    } else if (salaRaw.includes("sala 2") || salaRaw.endsWith(" 2")) {
                         salaKey = "Sala 2";
-                    } else if (salaRaw.includes("sala 3") || salaRaw.includes("100")) {
+                    } else if (salaRaw.includes("sala 3") || salaRaw.endsWith(" 3")) {
                         salaKey = "Sala 3";
                     }
 
@@ -269,7 +274,7 @@
 
                         salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
-                            title: tituloReunion, // Asignamos el título real extraído
+                            title: asuntoReunion, 
                             startTime: horaInicioLimpia,
                             endTime: horaFinLimpia
                         });
@@ -277,6 +282,7 @@
                 }
             });
 
+            // Ordenar cronológicamente las actividades
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -359,7 +365,7 @@
                                     element.remove();
                                     
                                     const total = sala.agenda.length;
-                                    document.getElementById(`count-${key}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
+                                    document.getElementById('count-' + key).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
                                     
                                     if (total === 0) {
                                         const listContainer = document.getElementById(`list-${key}`);
