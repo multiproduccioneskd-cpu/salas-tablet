@@ -26,7 +26,6 @@
             padding: 20px;
         }
 
-        /* Encabezado Superior Translúcido */
         .main-header {
             background: rgba(27, 42, 74, 0.95);
             color: #ffffff;
@@ -40,31 +39,10 @@
             border-left: 5px solid #dda126;
         }
 
-        .header-left-block {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .header-logo {
-            width: 65px;
-            height: auto;
-            object-fit: contain;
-        }
-
-        .header-text-group .title {
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-        }
-
-        .header-text-group .subtitle {
-            font-size: 12px;
-            color: #b0c4de;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 2px;
-        }
+        .header-left-block { display: flex; align-items: center; gap: 20px; }
+        .header-logo { width: 65px; height: auto; object-fit: contain; }
+        .header-text-group .title { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
+        .header-text-group .subtitle { font-size: 12px; color: #b0c4de; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 
         .date-badge {
             background: rgba(255, 255, 255, 0.15);
@@ -78,14 +56,8 @@
             line-height: 1.3;
         }
 
-        .live-time {
-            color: #52b3e5;
-            display: block;
-            font-size: 16px;
-            margin-top: 2px;
-        }
+        .live-time { color: #52b3e5; display: block; font-size: 16px; margin-top: 2px; }
 
-        /* Contenedor Grid */
         .rooms-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(48%, 1fr));
@@ -94,11 +66,8 @@
             margin-bottom: 20px;
         }
 
-        @media (max-width: 900px) {
-            .rooms-grid { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 900px) { .rooms-grid { grid-template-columns: 1fr; } }
 
-        /* Tarjeta de cada Sala */
         .room-card {
             background: rgba(255, 255, 255, 0.94);
             backdrop-filter: blur(5px);
@@ -111,6 +80,7 @@
             transition: transform 0.2s;
         }
 
+        .room-card:hover { transform: translateY(-2px); }
         .room-card.directorio-style { border-top: 5px solid #dda126; }
 
         .room-title-bar {
@@ -129,7 +99,6 @@
 
         .meetings-list { padding: 15px 20px; flex-grow: 1; overflow-y: auto; max-height: 280px; }
 
-        /* Estilos de los Items de Reunión y Animaciones */
         .meeting-item {
             display: flex;
             align-items: center;
@@ -149,7 +118,6 @@
         .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; margin-bottom: 2px; }
         .meeting-info { font-size: 12px; color: #718096; }
 
-        /* Clase de CSS que se inyecta dinámicamente para el desvanecimiento */
         .meeting-item.fade-out {
             opacity: 0;
             transform: scaleY(0);
@@ -161,7 +129,6 @@
 
         .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
 
-        /* Footer */
         .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
         .brand-bar .color-2 { flex: 1; background-color: #52b3e5; }
@@ -197,49 +164,81 @@
     </div>
 
     <script>
-        // DATA DE PRUEBA ASOCIADA AL DÍA ACTUAL
-        // Nota el formato "HH:MM": Es el que entrega Microsoft Graph de manera estándar
-        const salasUGM = [
-            {
-                id: "3162F1E1-C4C0-604B-51D8-91DA78970B97",
-                resourceEmail: "sala.directorio@ugm.cl",
-                displayName: "Sala de Directorio",
-                isDirectorio: true,
-                agenda: [
-                    { idMeet: "m1", title: "Reunión de Coordinación Directiva", org: "Rectoría", startTime: "08:30", endTime: "10:30" },
-                    { idMeet: "m2", title: "Comité de Aseguramiento de la Calidad", org: "Dirección de Calidad", startTime: "11:30", endTime: "13:00" },
-                    { idMeet: "m3", title: "Planificación Presupuestaria UGM", org: "Finanzas", startTime: "16:40", endTime: "18:00" } 
-                ]
-            },
-            {
-                id: "A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D",
-                resourceEmail: "sala.reuniones2@ugm.cl",
-                displayName: "Sala de Reuniones 2",
-                isDirectorio: false,
-                agenda: [
-                    { idMeet: "m4", title: "Coordinación Matrículas y Admisión", org: "Equipo de Difusión", startTime: "10:00", endTime: "11:30" },
-                    { idMeet: "m5", title: "Planificación Encuentro Alumni UGM", org: "Dirección de Vinculación", startTime: "14:30", endTime: "16:00" }
-                ]
-            },
-            {
-                id: "F6E5D4C3-B2A1-0F9E-8D7C-6B5A4M3N2P1Q",
-                resourceEmail: "sala.reuniones3@ugm.cl",
-                displayName: "Sala de Reuniones 3",
-                isDirectorio: false,
-                agenda: []
-            },
-            {
-                id: "78912345-6789-abcd-ef01-234567890abc",
-                resourceEmail: "sala.reuniones4@ugm.cl",
-                displayName: "Sala de Reuniones 4",
-                isDirectorio: false,
-                agenda: [
-                    { idMeet: "m6", title: "Alineación Plataformas TI y Virtuales", org: "Soporte Técnico", startTime: "16:00", endTime: "17:30" }
-                ]
-            }
+        // MAPEO DE SALAS CONECTADO A SHAREPOINT
+        // Nota: Asegúrate de ajustar los strings "displayName" para que calcen con cómo se llaman en tu Sharepoint.
+        let salasUGM = [
+            { id: "s-dir", displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
+            { id: "s-re2", displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
+            { id: "s-re3", displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
+            { id: "s-re4", displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
         ];
 
-        // Dibuja el Dashboard completo en pantalla
+        // 1. CONSUMIR DATOS DESDE NUESTRO BACKEND SEGURO EN VERCEL
+        async function fetchSalasFromAPI() {
+            try {
+                const response = await fetch('/api/salas');
+                const data = await response.json();
+                
+                if (data && data.value) {
+                    processSharepointData(data.value);
+                }
+            } catch (error) {
+                console.error("Error cargando agendas de Microsoft Graph:", error);
+            }
+        }
+
+        // 2. PROCESAR E INYECTAR LA DATA DE SHAREPOINT EN EL DASHBOARD
+        function processSharepointData(items) {
+            // Limpiar agendas anteriores antes de mapear lo nuevo
+            salasUGM.forEach(s => s.agenda = []);
+
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dd = String(hoy.getDate()).padStart(2, '0');
+            const fechaHoyStr = `${yyyy}-${mm}-${dd}`; // Formato YYYY-MM-DD
+
+            items.forEach((item, index) => {
+                const fields = item.fields;
+                if (!fields) return;
+
+                // Extraemos las variables según las columnas típicas de Sharepoint
+                // AJUSTAR AQUÍ si tus nombres de columna cambian (ej: fields.Title, fields.Organiza, etc.)
+                const tituloReunion = fields.Title || "Reunión Sin Título";
+                const organo = fields.Organiza || fields.Author || "Institucional";
+                const nombreSalaDestino = fields.Sala || ""; 
+                const horaInicio = fields.HoraInicio || "00:00"; // Formato esperado "HH:MM"
+                const horaFin = fields.HoraFin || "00:00";
+                const fechaReunion = fields.Fecha || ""; // Esperado "YYYY-MM-DD"
+
+                // FILTRO 1: Que la reunión pertenezca estrictamente al día de hoy
+                if (fechaReunion.startsWith(fechaHoyStr) || fechaReunion === fechaHoyStr) {
+                    
+                    // Buscamos a qué sala corresponde en nuestro arreglo de la pantalla
+                    const salaEncontrada = salasUGM.find(s => nombreSalaDestino.toLowerCase().includes(s.displayName.toLowerCase()));
+                    
+                    if (salaEncontrada) {
+                        salaEncontrada.agenda.push({
+                            idMeet: `sp-${index}`,
+                            title: tituloReunion,
+                            org: organo,
+                            startTime: horaInicio,
+                            endTime: horaFin
+                        });
+                    }
+                }
+            });
+
+            // Ordenar las reuniones de cada sala cronológicamente por hora de inicio
+            salasUGM.forEach(sala => {
+                sala.agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
+            });
+
+            // Pintar la interfaz actualizada
+            renderDashboard();
+        }
+
+        // 3. RENDERIZAR LA INTERFAZ EN EL GRID HTML
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
             let gridHTML = "";
@@ -282,39 +281,31 @@
             container.innerHTML = gridHTML;
         }
 
-        // REVISIÓN CRÍTICA: Evalúa si pasaron 20 minutos desde el inicio de cada reunión
+        // 4. LÓGICA AUTOMÁTICA DE FADE-OUT PASADOS 20 MINUTOS
         function checkMeetingsExpiration() {
             const now = new Date();
             const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
 
             salasUGM.forEach(sala => {
-                let cambioRealizado = false;
-
-                // Recorremos la agenda al revés para poder eliminar elementos de forma segura
                 for (let i = sala.agenda.length - 1; i >= 0; i--) {
                     const meet = sala.agenda[i];
                     const [startHour, startMin] = meet.startTime.split(':').map(Number);
                     const startMinutesTotal = (startHour * 60) + startMin;
 
-                    // LÓGICA: Si la hora actual supera por 20 minutos o más el inicio de la reunión
+                    // Si pasaron 20 minutos de la hora de inicio, gatillar la animación
                     if (currentMinutesTotal >= (startMinutesTotal + 20)) {
                         const element = document.getElementById(`meet-${meet.idMeet}`);
                         
                         if (element && !element.classList.contains('fade-out')) {
-                            // 1. Inyectamos la clase fade-out de CSS
                             element.classList.add('fade-out');
-                            cambioRealizado = true;
 
-                            // 2. Sacamos el objeto del arreglo interno tras terminar la animación visual (800ms)
                             setTimeout(() => {
                                 sala.agenda = sala.agenda.filter(m => m.idMeet !== meet.idMeet);
                                 element.remove();
                                 
-                                // Recalcular contadores en la tarjeta de la sala
                                 const total = sala.agenda.length;
                                 document.getElementById(`count-${sala.id}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
                                 
-                                // Si se quedó vacía, mostramos el mensaje de "Disponible"
                                 if (total === 0) {
                                     const listContainer = document.getElementById(`list-${sala.id}`);
                                     if (listContainer && !document.getElementById(`empty-${sala.id}`)) {
@@ -339,14 +330,15 @@
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
             document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', timeOptions);
 
-            // Ejecuta la revisión de expiración de minutos a la par del reloj
             checkMeetingsExpiration();
         }
         
         window.onload = function() {
             updateLiveDateTime();
-            renderDashboard();
-            setInterval(updateLiveDateTime, 1000); // Sincronizado al segundero
+            fetchSalasFromAPI(); // Carga inicial desde Sharepoint
+            
+            setInterval(updateLiveDateTime, 1000); // Reloj y borrado cada 1 segundo
+            setInterval(fetchSalasFromAPI, 300000); // Sincroniza con Sharepoint cada 5 minutos automáticamente
         };
     </script>
 </body>
