@@ -13,7 +13,8 @@
         }
 
         body {
-            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.jpg');
+            /* CORREGIDO: Cambiado de .jpg a .png para que coincida exactamente con tu GitHub */
+            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -153,7 +154,7 @@
     </div>
 
     <div class="rooms-grid" id="roomsContainer">
-        <div class="no-meetings" style="color: white;">Conectando con la agenda de SharePoint...</div>
+        <div class="no-meetings" style="color: white; width: 100%; text-align: center;">Cargando paneles informativos...</div>
     </div>
 
     <div>
@@ -166,7 +167,6 @@
     </div>
 
     <script>
-        // Estructura maestra que guardará los datos procesados de SharePoint
         let salasMapeadas = {};
 
         function parseField(value) {
@@ -182,16 +182,22 @@
                 const response = await fetch('/api/salas');
                 const data = await response.json();
                 
+                // Forzamos la impresión del objeto completo pase lo que pase
+                console.log(">>> RESPUESTA CRUDA DE LA API VERCEL:", data);
+
                 if (data && data.value) {
                     processSharepointData(data.value);
+                } else {
+                    console.log("Alerta: Estructura sin propiedad 'value'.");
+                    renderDashboard(); 
                 }
             } catch (error) {
-                console.error("Error al conectar con la API interna:", error);
+                console.error("Error crítico de red en fetch:", error);
+                renderDashboard();
             }
         }
 
         function processSharepointData(items) {
-            // Reiniciar el contenedor dinámico
             salasMapeadas = {
                 "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
                 "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
@@ -209,13 +215,14 @@
                 const fields = item.fields;
                 if (!fields) return;
 
-                // Captura directa usando las keys nativas de tu script de pruebas
+                // Esto imprimirá de forma limpia cada elemento en la pestaña Consola
+                console.log(`Campos del registro [${index}]:`, fields);
+
                 const tituloReunion = parseField(fields.Title) || "Reunión";
                 const organo = parseField(fields.Organiza || fields.Editor) || "UGM";
                 const horaInicio = parseField(fields.HoraInicio) || "00:00";
                 const horaFin = parseField(fields.HoraFin) || "00:00";
                 
-                // Buscar la columna de la sala dinámicamente analizando los valores dentro del JSON
                 let nombreSalaDestino = "";
                 for (let key in fields) {
                     const valStr = parseField(fields[key]);
@@ -225,7 +232,6 @@
                     }
                 }
 
-                // Buscar la columna fecha analizando si tiene guiones de formato ISO
                 let fechaReunionRaw = "";
                 for (let key in fields) {
                     const valStr = parseField(fields[key]);
@@ -235,9 +241,7 @@
                     }
                 }
 
-                // Si cae en el día de hoy, realizamos el empuje a la agenda correspondiente
                 if (fechaReunionRaw.includes(fechaHoyStr) && nombreSalaDestino) {
-                    // Normalizamos llaves para evitar errores de espacios o mayúsculas
                     let salaKey = "Sala de Reuniones 2";
                     if (nombreSalaDestino.includes("Directorio")) salaKey = "Sala de Directorio";
                     else if (nombreSalaDestino.includes("2")) salaKey = "Sala de Reuniones 2";
@@ -256,7 +260,6 @@
                 }
             });
 
-            // Ordenar cronológicamente y pintar
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -266,10 +269,20 @@
 
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
+            if (!container) return;
+            
             let gridHTML = "";
 
-            Object.keys(salasMapeadas).forEach(key => {
-                const sala = salasMapeadas[key];
+            // Si la API no ha poblado datos todavía, mostramos el cascarón inicial vacío
+            const salasAListar = Object.keys(salasMapeadas).length > 0 ? salasMapeadas : {
+                "Sala de Directorio": { displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
+                "Sala de Reuniones 2": { displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
+                "Sala de Reuniones 3": { displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
+                "Sala de Reuniones 4": { displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
+            };
+
+            Object.keys(salasAListar).forEach(key => {
+                const sala = salasAListar[key];
                 const cardClass = sala.isDirectorio ? "room-card directorio-style" : "room-card";
                 const totalReuniones = sala.agenda.length;
                 const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
@@ -308,6 +321,8 @@
         }
 
         function checkMeetingsExpiration() {
+            if (Object.keys(salasMapeadas).length === 0) return;
+            
             Object.keys(salasMapeadas).forEach(key => {
                 const sala = salasMapeadas[key];
                 const now = new Date();
@@ -360,9 +375,10 @@
         
         window.onload = function() {
             updateLiveDateTime();
+            renderDashboard(); // Asegura el dibujo del cascarón al tiro
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 10000); // Forzado cada 10 segundos para ver cambios al tiro
+            setInterval(fetchSalasFromAPI, 15000);
         };
     </script>
 </body>
