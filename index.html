@@ -164,13 +164,22 @@
     </div>
 
     <script>
-        // LISTA DE SALAS OFICIALES REQUERIDAS
+        // LISTA DE SALAS OBJETIVO
         let salasUGM = [
             { id: "s-dir", displayName: "Sala de Directorio", isDirectorio: true, agenda: [] },
             { id: "s-re2", displayName: "Sala de Reuniones 2", isDirectorio: false, agenda: [] },
             { id: "s-re3", displayName: "Sala de Reuniones 3", isDirectorio: false, agenda: [] },
             { id: "s-re4", displayName: "Sala de Reuniones 4", isDirectorio: false, agenda: [] }
         ];
+
+        // Función para limpiar o extraer strings si vienen como objetos desde SharePoint
+        function parseSharepointField(fieldValue) {
+            if (!fieldValue) return "";
+            if (typeof fieldValue === 'object') {
+                return fieldValue.Value || fieldValue.Label || fieldValue.TermGuid || JSON.stringify(fieldValue);
+            }
+            return String(fieldValue);
+        }
 
         async function fetchSalasFromAPI() {
             try {
@@ -180,7 +189,7 @@
                 if (data && data.value) {
                     processSharepointData(data.value);
                 } else {
-                    console.log("La API no retornó el formato 'value' esperado:", data);
+                    console.log("Respuesta sin array 'value':", data);
                 }
             } catch (error) {
                 console.error("Error cargando agendas de Microsoft Graph:", error);
@@ -188,54 +197,53 @@
         }
 
         function processSharepointData(items) {
-            // Reiniciar agendas antiguas
+            // Vaciar agendas
             salasUGM.forEach(s => s.agenda = []);
 
             const hoy = new Date();
             const yyyy = hoy.getFullYear();
             const mm = String(hoy.getMonth() + 1).padStart(2, '0');
             const dd = String(hoy.getDate()).padStart(2, '0');
-            const fechaHoyStr = `${yyyy}-${mm}-${dd}`;
+            const fechaHoyStr = `${yyyy}-${mm}-${dd}`; // "YYYY-MM-DD"
 
             items.forEach((item, index) => {
                 const fields = item.fields;
                 if (!fields) return;
 
-                // MIRA AQUÍ: Esto imprimirá en la consola de la tablet todas las columnas disponibles de Sharepoint
-                console.log("Estructura interna detectada en Sharepoint:", fields);
+                console.log(`Elemento [${index}] campos brutos:`, fields);
 
-                // CAPTURA FLEXIBLE DE DATOS POR SI CAMBIAN LOS NOMBRES TÉCNICOS
-                const tituloReunion = fields.Title || fields.LinkTitle || "Reunión Sin Título";
-                const organo = fields.Organiza || fields.Organizador || fields.AuthorLookupId || "Institucional";
-                
-                // Mapeo dinámico para capturar el nombre de la sala sin importar si tiene prefijos o espacios codificados
+                // 1. EXTRAER TÍTULO Y ORGANIZADOR DE FORMA SEGURA
+                const tituloReunion = parseSharepointField(fields.Title || fields.LinkTitle) || "Reunión Sin Título";
+                const organo = parseSharepointField(fields.Organiza || fields.Organizador || fields.AuthorLookupId) || "Institucional";
+                const horaInicio = parseSharepointField(fields.HoraInicio || fields.Hora_x0020_Inicio) || "00:00"; 
+                const horaFin = parseSharepointField(fields.HoraFin || fields.Hora_x0020_Fin) || "00:00";
+
+                // 2. DETECTAR EL CAMPO DE LA SALA DINÁMICAMENTE
                 let nombreSalaDestino = "";
                 Object.keys(fields).forEach(key => {
-                    if (key.toLowerCase().includes('sala') || key.toLowerCase().includes('calendar')) {
-                        nombreSalaDestino = String(fields[key]);
+                    const keyLower = key.toLowerCase();
+                    if (keyLower.includes('sala') || keyLower.includes('room') || keyLower.includes('calendar') || keyLower.includes('ubicacion') || keyLower.includes('location')) {
+                        nombreSalaDestino = parseSharepointField(fields[key]);
                     }
                 });
-                
-                // Si la búsqueda anterior no falló y detectó texto vacío, probamos con alternativas genéricas
-                if (!nombreSalaDestino) {
-                    nombreSalaDestino = fields.Sala || fields.NombreSala || fields.Location || "";
+
+                // 3. DETECTAR EL CAMPO DE FECHA DINÁMICAMENTE
+                let fechaReunionRaw = "";
+                Object.keys(fields).forEach(key => {
+                    if (key.toLowerCase().includes('fecha') || key.toLowerCase() === 'eventdate' || key.toLowerCase() === 'startdate') {
+                        fechaReunionRaw = parseSharepointField(fields[key]);
+                    }
+                });
+
+                // Si viene vacía la fecha del barrido, intentamos mapeos directos estándar
+                if (!fechaReunionRaw) {
+                    fechaReunionRaw = parseSharepointField(fields.Fecha || fields.FechaReunion);
                 }
 
-                const horaInicio = fields.HoraInicio || fields.Hora_x0020_Inicio || "00:00"; 
-                const horaFin = fields.HoraFin || fields.Hora_x0020_Fin || "00:00";
-                
-                // Buscar cualquier propiedad que parezca fecha
-                let fechaReunion = fields.Fecha || fields.FechaReunion || "";
-                Object.keys(fields).forEach(key => {
-                    if (key.toLowerCase() === 'fecha') {
-                        fechaReunion = fields[key];
-                    }
-                });
-
-                // Validación estricta del día de hoy
-                if (fechaReunion && (fechaReunion.startsWith(fechaHoyStr) || fechaReunion === fechaHoyStr)) {
+                // VALIDACIÓN: Comprobamos si la fecha de la reunión contiene el día de hoy (ej: "2026-05-27T10:00:00Z" incluye "2026-05-27")
+                if (fechaReunionRaw && fechaReunionRaw.includes(fechaHoyStr)) {
                     
-                    // Buscamos coincidencia de texto dentro de nuestra lista fija
+                    // Cruce con nuestra lista de salas en la pantalla
                     const salaEncontrada = salasUGM.find(s => 
                         nombreSalaDestino.toLowerCase().trim().includes(s.displayName.toLowerCase().trim()) || 
                         s.displayName.toLowerCase().trim().includes(nombreSalaDestino.toLowerCase().trim())
@@ -253,7 +261,7 @@
                 }
             });
 
-            // Ordenamiento por hora
+            // Ordenar por hora
             salasUGM.forEach(sala => {
                 sala.agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -310,29 +318,34 @@
             salasUGM.forEach(sala => {
                 for (let i = sala.agenda.length - 1; i >= 0; i--) {
                     const meet = sala.agenda[i];
-                    const [startHour, startMin] = meet.startTime.split(':').map(Number);
-                    const startMinutesTotal = (startHour * 60) + startMin;
+                    // Asegurar que procesamos solo HH:MM limpios
+                    const cleanTime = meet.startTime.split(' ')[0]; 
+                    const [startHour, startMin] = cleanTime.split(':').map(Number);
+                    
+                    if (!isNaN(startHour) && !isNaN(startMin)) {
+                        const startMinutesTotal = (startHour * 60) + startMin;
 
-                    if (currentMinutesTotal >= (startMinutesTotal + 20)) {
-                        const element = document.getElementById(`meet-${meet.idMeet}`);
-                        
-                        if (element && !element.classList.contains('fade-out')) {
-                            element.classList.add('fade-out');
+                        if (currentMinutesTotal >= (startMinutesTotal + 20)) {
+                            const element = document.getElementById(`meet-${meet.idMeet}`);
+                            
+                            if (element && !element.classList.contains('fade-out')) {
+                                element.classList.add('fade-out');
 
-                            setTimeout(() => {
-                                sala.agenda = sala.agenda.filter(m => m.idMeet !== meet.idMeet);
-                                element.remove();
-                                
-                                const total = sala.agenda.length;
-                                document.getElementById(`count-${sala.id}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
-                                
-                                if (total === 0) {
-                                    const listContainer = document.getElementById(`list-${sala.id}`);
-                                    if (listContainer && !document.getElementById(`empty-${sala.id}`)) {
-                                        listContainer.innerHTML = `<div class="no-meetings" id="empty-${sala.id}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                                setTimeout(() => {
+                                    sala.agenda = sala.agenda.filter(m => m.idMeet !== meet.idMeet);
+                                    element.remove();
+                                    
+                                    const total = sala.agenda.length;
+                                    document.getElementById(`count-${sala.id}`).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
+                                    
+                                    if (total === 0) {
+                                        const listContainer = document.getElementById(`list-${sala.id}`);
+                                        if (listContainer && !document.getElementById(`empty-${sala.id}`)) {
+                                            listContainer.innerHTML = `<div class="no-meetings" id="empty-${sala.id}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                                        }
                                     }
-                                }
-                            }, 800);
+                                }, 800);
+                            }
                         }
                     }
                 }
@@ -358,7 +371,7 @@
             fetchSalasFromAPI();
             
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 300000); // 5 Minutos
+            setInterval(fetchSalasFromAPI, 300000); // Actualiza cada 5 min de SharePoint
         };
     </script>
 </body>
