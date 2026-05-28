@@ -138,7 +138,7 @@
         <div class="header-left-block">
             <img src="logo-blanco-celeste.png" alt="Logo UGM" class="header-logo">
             <div class="header-text-group">
-                <div class="title">Visor de Agenda diaria de Salas</div>
+                <div class="title">Visor de Reuniones UGM</div>
                 <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
             </div>
         </div>
@@ -220,42 +220,28 @@
                 const fields = item.fields;
                 if (!fields) return;
 
-                // 1. DÓNDE SE HACE (SALA)
                 const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
+                const rawInicio = fields.HoraInicio;
+                const rawFin = fields.HoraFin;
 
-                // 2. HORARIOS
-                let rawInicio = fields.HoraInicio || fields.EventDate || fields.Start || "";
-                let rawFin = fields.HoraFin || fields.EndDate || fields.End || "";
-                
-                if (!rawInicio || !rawFin) {
-                    for (let key in fields) {
-                        const val = String(fields[key]);
-                        const k = key.toLowerCase();
-                        if (val.includes('T') && val.includes('Z')) { 
-                            if (k.includes('inicio') || k.includes('start')) rawInicio = val;
-                            if (k.includes('fin') || k.includes('end')) rawFin = val;
-                        }
-                    }
+                let nombreDeLaReunion = parseField(fields.Asunto || fields.asunto).trim();
+                if (!nombreDeLaReunion) {
+                    nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
                 }
-
-                // 3. NOMBRE DE LA REUNIÓN (TÍTULO) - Directo y sin adivinar
-                let nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
-                
                 if (!nombreDeLaReunion) {
                     nombreDeLaReunion = "Reunión Reservada";
                 }
 
-                // 4. ENRUTAMIENTO (Solo si es hoy)
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio")) {
                         salaKey = "Sala Junta Directiva";
-                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw === "1" || columnaSalaRaw.endsWith("1")) {
+                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1")) {
                         salaKey = "Sala 1";
-                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw === "2" || columnaSalaRaw.endsWith("2")) {
+                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2")) {
                         salaKey = "Sala 2";
-                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw === "3" || columnaSalaRaw.endsWith("3")) {
+                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3")) {
                         salaKey = "Sala 3";
                     }
 
@@ -273,7 +259,6 @@
                 }
             });
 
-            // Ordenar cronológicamente
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -389,7 +374,7 @@
             renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 20000); // 20 segundos de recarga
+            setInterval(fetchSalasFromAPI, 20000);
         };
     </script>
 </body>
