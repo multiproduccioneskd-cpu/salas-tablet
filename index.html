@@ -174,13 +174,16 @@
             }
         }
 
-        // Filtro de fecha amplio para capturar cualquier reunión del mes de Junio
+        // Filtro estricto del día de hoy para limpiar el bulto de mayo de la API
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
                 const eventDate = new Date(isoString);
                 const today = new Date();
-                return eventDate.getMonth() === today.getMonth() &&
+                
+                // Pasa si es el mismo año, mes y día (2 de junio)
+                return eventDate.getDate() === today.getDate() &&
+                       eventDate.getMonth() === today.getMonth() &&
                        eventDate.getFullYear() === today.getFullYear();
             } catch (e) {
                 return false;
@@ -234,6 +237,7 @@
                     nombreDeLaReunion = "Reunión Reservada";
                 }
 
+                // Aplicamos el filtro de hoy para que limpie espacio en las tarjetas
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     
@@ -318,11 +322,8 @@
             container.innerHTML = gridHTML;
         }
 
-        // DESACTIVADO EL SCRIPT JODIDO: Se apaga la función de borrado automático
-        // para asegurar que las pruebas de la tarde se queden fijas en la pantalla de demo.
-        function checkMeetingsExpiration() {
-            // Lógica pausada temporalmente por Pipe para la presentación
-        }
+        // Dejamos la expiración comentada para que no te borre nada durante las pruebas
+        function checkMeetingsExpiration() { }
 
         function updateLiveDateTime() {
             const now = new Date();
