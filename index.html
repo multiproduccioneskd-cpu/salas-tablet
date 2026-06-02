@@ -172,19 +172,6 @@
             }
         }
 
-        // Nueva función de filtrado para validar que corresponda al mes en curso de la tablet
-        function isEventInCurrentMonth(isoString) {
-            if (!isoString) return false;
-            try {
-                const eventDate = new Date(isoString);
-                const today = new Date();
-                return eventDate.getMonth() === today.getMonth() &&
-                       eventDate.getFullYear() === today.getFullYear();
-            } catch (e) {
-                return false;
-            }
-        }
-
         function parseField(value) {
             if (!value) return "";
             if (typeof value === 'object') {
@@ -214,18 +201,20 @@
             initSalas();
 
             items.forEach((item, index) => {
-                const fields = item.fields || item; // Soporta formato crudo e intermedio
+                const fields = item.fields || item; 
                 if (!fields) return;
 
                 const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
-                const rawInicio = fields.HoraInicio || fields.EventDate || fields.Start;
+                
+                // Buscamos cualquier campo de fecha disponible en la respuesta de la API
+                const rawInicio = String(fields.HoraInicio || fields.EventDate || fields.Start || "");
                 const rawFin = fields.HoraFin || fields.EndDate || fields.End;
 
                 let nombreDeLaReunion = parseField(fields.Asunto || fields.Title).trim();
                 if (!nombreDeLaReunion) nombreDeLaReunion = "Actividad Reservada";
 
-                // ÚNICO CAMBIO: Aplicamos el filtro para dejar pasar solo los eventos de este mes
-                if (isEventInCurrentMonth(rawInicio) && columnaSalaRaw) {
+                // PASO A PASO: Filtro por texto estricto. Solo pasa si la fecha contiene "-06-" (Junio)
+                if (rawInicio.includes("-06-") && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
                         salaKey = "Sala Junta Directiva";
