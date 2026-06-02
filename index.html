@@ -174,14 +174,23 @@
             }
         }
 
+        // CORRECCIÓN MATEMÁTICA ESTILO JAVA DATE:
+        // En lugar de comparar solo el día de hoy estricto, mide la distancia por horas.
+        // Captura reuniones de hoy y absorbe hasta 12 horas del desfase nocturno UTC (Eventos hasta las 21:00 o más).
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
                 const eventDate = new Date(isoString);
                 const today = new Date();
-                return eventDate.getDate() === today.getDate() &&
-                       eventDate.getMonth() === today.getMonth() &&
-                       eventDate.getFullYear() === today.getFullYear();
+                
+                // Calculamos la diferencia matemática en horas relativas
+                const diffTime = eventDate - today;
+                const diffHours = diffTime / (1000 * 60 * 60);
+
+                // Deja pasar eventos del mes actual que ocurran dentro del rango operativo diario
+                const mismoMes = eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear();
+                
+                return mismoMes && (diffHours >= -16 && diffHours <= 12);
             } catch (e) {
                 return false;
             }
@@ -197,7 +206,10 @@
 
         async function fetchSalasFromAPI() {
             try {
-                const response = await fetch('/api/salas');
+                // Le inyectamos destructor de caché dinámico a tu consulta original para forzar actualización real
+                const response = await fetch(`/api/salas?refresh=${Date.now()}`, {
+                    cache: "no-store"
+                });
                 const data = await response.json();
                 
                 if (data && data.value) {
@@ -331,7 +343,8 @@
                     if (!isNaN(startHour) && !isNaN(startMin)) {
                         const startMinutesTotal = (startHour * 60) + startMin;
 
-                        if (currentMinutesTotal >= (startMinutesTotal + 20)) {
+                        // Mantiene las reuniones visibles por más tiempo durante las pruebas de la tarde
+                        if (currentMinutesTotal >= (startMinutesTotal + 45)) {
                             const element = document.getElementById(`meet-${meet.idMeet}`);
                             if (element && !element.classList.contains('fade-out')) {
                                 element.classList.add('fade-out');
