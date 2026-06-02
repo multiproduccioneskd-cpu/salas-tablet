@@ -162,9 +162,8 @@
             }
         }
 
-        // NUEVO FILTRO EN TIEMPO REAL CONECTADO:
-        // Evalúa la ventana de tiempo del evento. Captura reuniones que ocurran en un rango amplio de 36 horas
-        // Esto previene que los desfases de SharePoint oculten pruebas ingresadas por la tarde.
+        // Filtro de rango de tiempo amplio: pilla reuniones creadas hoy en SharePoint, 
+        // absorbiendo cualquier desfase horario (UTC) que tire el servidor de Microsoft.
         function isEventTodayOrNear(isoString) {
             if (!isoString) return false;
             try {
@@ -174,7 +173,6 @@
                 const diffTime = eventDate - today;
                 const diffHours = diffTime / (1000 * 60 * 60);
                 
-                // Retorna verdadero si el evento es de hoy o se desplaza unas horas por UTC
                 return diffHours >= -24 && diffHours <= 18;
             } catch (e) {
                 return false;
@@ -191,7 +189,7 @@
 
         async function fetchSalasFromAPI() {
             try {
-                // Forzamos a la API a no responder con datos cacheados
+                // Rompe el caché de Vercel inyectando un timestamp único
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`, {
                     cache: "no-store",
                     headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
@@ -207,7 +205,6 @@
         }
 
         function processSharepointData(items) {
-            // Inicializar las 4 salas mapeadas fijas de la UGM
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
                 "Sala 1": { displayName: "Sala 1", agenda: [] },
@@ -231,7 +228,6 @@
                     nombreDeLaReunion = "Actividad Reservada";
                 }
 
-                // Si cumple con el rango de tiempo de hoy, se mapea dinámicamente
                 if (isEventTodayOrNear(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
@@ -248,17 +244,19 @@
                         const horaInicioLimpia = formatISODateToHHMM(rawInicio);
                         const horaFinLimpia = formatISODateToHHMM(rawFin);
 
-                        salasMapeadas[salaKey].agenda.push({
-                            idMeet: `real-sp-${index}`,
-                            title: nombreDeLaReunion,
-                            startTime: horaInicioLimpia,
-                            endTime: horaFinLimpia
-                        });
+                        // Corrección de sintaxis limpia aplicada aquí
+                        if (!salasMapeadas[salaKey].agenda.some(m => m.title === nombreDeLaReunion && m.startTime === horaInicioLimpia)) {
+                            salasMapeadas[salaKey].agenda.push({
+                                idMeet: `real-sp-${index}`,
+                                title: nombreDeLaReunion,
+                                startTime: horaInicioLimpia,
+                                endTime: horaFinLimpia
+                            });
+                        }
                     }
                 }
             });
 
-            // Ordenamiento cronológico de las reuniones
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -326,7 +324,7 @@
             renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 15000); // Consulta real cada 15 segundos
+            setInterval(fetchSalasFromAPI, 15000);
         };
     </script>
 </body>
