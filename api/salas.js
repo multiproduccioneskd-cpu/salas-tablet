@@ -1,28 +1,19 @@
-// api/salas.js - Backend optimizado y a prueba de errores
+// api/salas.js
 export default async function handler(req, res) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
     try {
-        // Usamos una URL estándar sin filtros complejos para asegurar la conexión
-        const sharepointUrl = `https://graph.microsoft.com/v1.0/sites/${process.env.SHAREPOINT_SITE_ID}/lists/${process.env.SHAREPOINT_LIST_ID}/items?expand=fields`;
+        const url = `https://graph.microsoft.com/v1.0/sites/${process.env.SHAREPOINT_SITE_ID}/lists/${process.env.SHAREPOINT_LIST_ID}/items?expand=fields`;
         
-        const response = await fetch(sharepointUrl, {
-            headers: {
-                'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`,
-                'Accept': 'application/json'
-            }
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`, 'Accept': 'application/json' }
         });
 
-        if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(`Error ${response.status}: ${errorData}`);
-        }
-
         const data = await response.json();
-        return res.status(200).json(data);
+        
+        // Si hay error en la respuesta de Graph, lo mandamos como JSON para que el HTML lo vea
+        if (!response.ok) return res.status(500).json({ error: "Graph API Error", details: data });
 
+        return res.status(200).json(data);
     } catch (error) {
-        console.error("Error crítico en API:", error);
-        return res.status(500).json({ error: "Fallo de conexión", detalles: error.message });
+        return res.status(500).json({ error: "Backend Error", details: error.message });
     }
 }
