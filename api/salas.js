@@ -1,31 +1,25 @@
-// api/salas.js - EL BACKEND ESTÁNDAR QUE SÍ FUNCIONA
 export default async function handler(req, res) {
-    // Desactivamos el caché para asegurar que traiga lo último de SharePoint
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     try {
-        // Esta es la URL limpia que no debería tirar error 400 ni 500
-        const sharepointUrl = `https://graph.microsoft.com/v1.0/sites/${process.env.SHAREPOINT_SITE_ID}/lists/${process.env.SHAREPOINT_LIST_ID}/items?expand=fields`;
+        // URL NATIVA REST DE SHAREPOINT (Más estable que Graph para listas)
+        const siteUrl = `https://${process.env.SHAREPOINT_DOMAIN}/sites/${process.env.SHAREPOINT_SITE_NAME}/_api/web/lists/getbytitle('${process.env.LIST_NAME}')/items`;
         
-        const response = await fetch(sharepointUrl, {
+        const response = await fetch(siteUrl, {
             headers: {
-                'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`,
-                'Accept': 'application/json'
+                'Authorization': `Bearer ${process.env.SHAREPOINT_TOKEN}`,
+                'Accept': 'application/json;odata=verbose'
             }
         });
 
-        if (!response.ok) {
-            console.error("Error desde Microsoft:", await response.text());
-            throw new Error(`Estado de respuesta: ${response.status}`);
-        }
-
         const data = await response.json();
         
-        // Enviamos la data cruda al frontend
-        return res.status(200).json(data);
+        // SharePoint OData devuelve la data en 'd.results'
+        const results = data.d ? data.d.results : [];
+        return res.status(200).json(results);
 
     } catch (error) {
-        console.error("Error en backend:", error);
-        return res.status(500).json({ error: "Fallo en la conexión", detalles: error.message });
+        console.error("Error Backend:", error);
+        return res.status(500).json({ error: "Fallo de conexión" });
     }
 }
