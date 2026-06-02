@@ -162,15 +162,15 @@
             }
         }
 
-        // PROPUESTA PIPE: Filtro de rango amplio para aceptar todo el mes de Junio (2026-06)
-        // Esto absorbe cualquier error de desfase y captura las reuniones nuevas creadas por la tarde
+        // FILTRO DE MES DE RANGO AMPLIO:
+        // Deja pasar cualquier evento que pertenezca al mes en curso (Junio).
+        // Evita descartar los eventos nuevos creados por desfases UTC.
         function isEventInCurrentMonth(isoString) {
             if (!isoString) return false;
             try {
                 const eventDate = new Date(isoString);
                 const today = new Date();
-                // Retorna verdadero si el año y el mes calzan con la fecha actual de la tablet
-                return eventDate.getMonth() === today.getMonth() && 
+                return eventDate.getMonth() === today.getMonth() &&
                        eventDate.getFullYear() === today.getFullYear();
             } catch (e) {
                 return false;
@@ -225,7 +225,7 @@
                     nombreDeLaReunion = "Actividad Reservada";
                 }
 
-                // Aplicamos el filtro de mes completo sugerido para atrapar todo
+                // Validamos usando únicamente el filtro de mes de rango amplio
                 if (isEventInCurrentMonth(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
@@ -254,7 +254,6 @@
                 }
             });
 
-            // Ordenamiento por hora
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
