@@ -101,29 +101,17 @@
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid #edf2f7;
-            opacity: 1;
-            transform: scaleY(1);
-            transform-origin: top;
-            transition: opacity 0.8s ease, transform 0.8s ease, padding 0.8s ease, max-height 0.8s ease;
-            max-height: 100px; 
         }
 
-        .meeting-item:last-child { border-bottom: none; }
         .meeting-time { min-width: 95px; }
         .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; text-align: center; }
         .meeting-details { flex-grow: 1; padding-left: 15px; }
         .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; }
 
-        .meeting-item.fade-out {
-            opacity: 0;
-            transform: scaleY(0);
-            padding-top: 0;
-            padding-bottom: 0;
-            max-height: 0;
-            border-bottom: none;
-        }
-
         .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
+        
+        /* Estilo para errores técnicos en pantalla */
+        .api-error-msg { color: #d9534f; font-weight: bold; font-style: normal !important; font-size: 12px !important; line-height: 1.4; }
 
         .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
@@ -161,6 +149,7 @@
 
     <script>
         let salasMapeadas = {};
+        let statusErrorAPI = false; // Nos avisa si la consulta falla
 
         function formatISODateToHHMM(isoString) {
             if (!isoString) return "00:00";
@@ -174,7 +163,6 @@
             }
         }
 
-        // Validación tolerante de fecha: compara año, mes y día de forma local
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
@@ -201,17 +189,25 @@
                 const response = await fetch('/api/salas');
                 const data = await response.json();
                 
-                console.log(">>> DATOS CRUDOS ENTRANTES:", data);
+                console.log(">>> RESPUESTA CRUDA:", data);
                 
-                if (data && data.value) {
+                if (data && data.value && data.value.length > 0) {
+                    statusErrorAPI = false;
                     processSharepointData(data.value);
+                } else {
+                    // Si responde pero viene vacío (0 registros)
+                    statusErrorAPI = "vacio";
+                    renderDashboard();
                 }
             } catch (error) {
-                console.error("Error al conectar con la API interna:", error);
+                console.error("Error en la conexión:", error);
+                statusErrorAPI = "caido";
+                renderDashboard();
             }
         }
 
         function processSharepointData(items) {
+            // Reiniciamos las estructuras limpias
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
                 "Sala 1": { displayName: "Sala 1", agenda: [] },
@@ -232,10 +228,10 @@
                     nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
                 }
                 if (!nombreDeLaReunion) {
-                    nombreDeLaReunion = "Reunión Reservada";
+                    nombreDeLaReunion = "Actividad Reservada";
                 }
 
-                // Forzamos el paso si es hoy, omitiendo descartes estrictos por hora en la carga inicial
+                // Validación simple de fecha: procesar si coincide con el día de hoy
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
@@ -262,6 +258,7 @@
                 }
             });
 
+            // Ordenamiento cronológico
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -274,18 +271,20 @@
             if (!container) return;
             
             let gridHTML = "";
-            const salasAListar = Object.keys(salasMapeadas).length > 0 ? salasMapeadas : {
-                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
-                "Sala 1": { displayName: "Sala 1", agenda: [] },
-                "Sala 2": { displayName: "Sala 2", agenda: [] },
-                "Sala 3": { displayName: "Sala 3", agenda: [] }
+            const salasAListar = {
+                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: (salasMapeadas["Sala Junta Directiva"] ? salasMapeadas["Sala Junta Directiva"].agenda : []) },
+                "Sala 1": { displayName: "Sala 1", agenda: (salasMapeadas["Sala 1"] ? salasMapeadas["Sala 1"].agenda : []) },
+                "Sala 2": { displayName: "Sala 2", agenda: (salasMapeadas["Sala 2"] ? salasMapeadas["Sala 2"].agenda : []) },
+                "Sala 3": { displayName: "Sala 3", agenda: (salasMapeadas["Sala 3"] ? salasMapeadas["Sala 3"].agenda : []) }
             };
 
             Object.keys(salasAListar).forEach(key => {
                 const sala = salasAListar[key];
                 const cardClass = "room-card";
                 const totalReuniones = sala.agenda.length;
-                const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
+                
+                let countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
+                if (statusErrorAPI) countText = "Desconectado";
 
                 gridHTML += `
                     <div class="${cardClass}">
@@ -296,8 +295,13 @@
                         <div class="meetings-list" id="list-${key}">
                 `;
 
-                if (totalReuniones === 0) {
-                    gridHTML += `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                // CONTROL DE DIAGNÓSTICO EN TIEMPO REAL
+                if (statusErrorAPI === "caido") {
+                    gridHTML += `<div class="no-meetings api-error-msg">⚠️ Error crítico de conexión.<br>La API intermedio en Vercel está caída o bloqueada.</div>`;
+                } else if (statusErrorAPI === "vacio") {
+                    gridHTML += `<div class="no-meetings api-error-msg">⚠️ Conexión exitosa, pero la lista de SharePoint no tiene ninguna fila creada hoy.</div>`;
+                } else if (totalReuniones === 0) {
+                    gridHTML += `<div class="no-meetings">No hay reuniones programadas para hoy en esta sala.</div>`;
                 } else {
                     sala.agenda.forEach(meet => {
                         gridHTML += `
@@ -319,48 +323,6 @@
             container.innerHTML = gridHTML;
         }
 
-        function checkMeetingsExpiration() {
-            if (Object.keys(salasMapeadas).length === 0) return;
-            
-            Object.keys(salasMapeadas).forEach(key => {
-                const sala = salasMapeadas[key];
-                const now = new Date();
-                const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
-
-                for (let i = sala.agenda.length - 1; i >= 0; i--) {
-                    const meet = sala.agenda[i];
-                    const [startHour, startMin] = meet.startTime.split(':').map(Number);
-                    
-                    if (!isNaN(startHour) && !isNaN(startMin)) {
-                        const startMinutesTotal = (startHour * 60) + startMin;
-
-                        // Tolerancia en vivo amplia para evitar desapariciones imprevistas en pruebas
-                        if (currentMinutesTotal >= (startMinutesTotal + 60)) {
-                            const element = document.getElementById(`meet-${meet.idMeet}`);
-                            if (element && !element.classList.contains('fade-out')) {
-                                element.classList.add('fade-out');
-
-                                setTimeout(() => {
-                                    sala.agenda = sala.agenda.filter(m => m.idMeet !== meet.idMeet);
-                                    element.remove();
-                                    
-                                    const total = sala.agenda.length;
-                                    document.getElementById('count-' + key).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
-                                    
-                                    if (total === 0) {
-                                        const listContainer = document.getElementById(`list-${key}`);
-                                        if (listContainer) {
-                                            listContainer.innerHTML = `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
-                                        }
-                                    }
-                                }, 800);
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
         function updateLiveDateTime() {
             const now = new Date();
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -369,16 +331,14 @@
 
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
             document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', timeOptions);
-
-            checkMeetingsExpiration();
         }
         
         window.onload = function() {
             updateLiveDateTime();
-            renderDashboard(); 
-            fetchSalasFromAPI();
+            renderDashboard(); // Dibuja el esqueleto de inmediato
+            fetchSalasFromAPI(); // Llama a SharePoint
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 20000);
+            setInterval(fetchSalasFromAPI, 15000); // Monitorea cada 15 segundos
         };
     </script>
 </body>
