@@ -104,27 +104,12 @@
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid #edf2f7;
-            opacity: 1;
-            transform: scaleY(1);
-            transform-origin: top;
-            transition: opacity 0.8s ease, transform 0.8s ease, padding 0.8s ease, max-height 0.8s ease;
-            max-height: 100px; 
         }
 
-        .meeting-item:last-child { border-bottom: none; }
         .meeting-time { min-width: 95px; }
         .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; text-align: center; }
         .meeting-details { flex-grow: 1; padding-left: 15px; }
         .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; }
-
-        .meeting-item.fade-out {
-            opacity: 0;
-            transform: scaleY(0);
-            padding-top: 0;
-            padding-bottom: 0;
-            max-height: 0;
-            border-bottom: none;
-        }
 
         .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
 
@@ -165,6 +150,16 @@
     <script>
         let salasMapeadas = {};
 
+        // Inicializador base de la visualización
+        function initSalas() {
+            salasMapeadas = {
+                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
+                "Sala 1": { displayName: "Sala 1", agenda: [] },
+                "Sala 2": { displayName: "Sala 2", agenda: [] },
+                "Sala 3": { displayName: "Sala 3", agenda: [] }
+            };
+        }
+
         function formatISODateToHHMM(isoString) {
             if (!isoString) return "00:00";
             try {
@@ -177,19 +172,6 @@
             }
         }
 
-        // Filtro adaptado para el JSON de GitHub: Valida si corresponde al mes en curso (Junio)
-        function isEventInCurrentMonth(isoString) {
-            if (!isoString) return false;
-            try {
-                const eventDate = new Date(isoString);
-                const today = new Date();
-                return eventDate.getMonth() === today.getMonth() &&
-                       eventDate.getFullYear() === today.getFullYear();
-            } catch (e) {
-                return false;
-            }
-        }
-
         function parseField(value) {
             if (!value) return "";
             if (typeof value === 'object') {
@@ -198,57 +180,46 @@
             return String(value);
         }
 
+        // LLAMADO DINÁMICO CONECTADO AL BACKEND
         async function fetchSalasFromAPI() {
             try {
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`, {
-                    cache: "no-store"
+                    cache: "no-store",
+                    headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
                 });
                 const data = await response.json();
                 
-                // Si viene del JSON de GitHub salas.js, la data puede venir directo en el array 
-                // o metido en data.value. El script ahora soporta ambas opciones para no romperse.
-                const itemsList = Array.isArray(data) ? data : (data.value || []);
-                if (itemsList.length > 0) {
-                    processSharepointData(itemsList);
+                if (data && data.value && data.value.length > 0) {
+                    processSharepointData(data.value);
                 }
             } catch (error) {
-                console.error("Error al conectar con la API interna:", error);
+                console.error("Endpoint /api/salas desconectado temporalmente. Esperando inyección de datos...");
             }
         }
 
         function processSharepointData(items) {
-            salasMapeadas = {
-                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
-                "Sala 1": { displayName: "Sala 1", agenda: [] },
-                "Sala 2": { displayName: "Sala 2", agenda: [] },
-                "Sala 3": { displayName: "Sala 3", agenda: [] }
-            };
+            initSalas();
 
             items.forEach((item, index) => {
-                // Doble soporte: lee directo del objeto (formato JSON salas.js) o de item.fields (SharePoint)
-                const fields = item.fields || item;
+                const fields = item.fields || item; // Soporta formato crudo e intermedio
                 if (!fields) return;
 
-                const columnaSalaRaw = String(fields.Sala || fields.sala || "").toLowerCase().trim();
-                const rawInicio = fields.HoraInicio || fields.casillaTiempo || fields.EventDate || fields.Start;
+                const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
+                const rawInicio = fields.HoraInicio || fields.EventDate || fields.Start;
                 const rawFin = fields.HoraFin || fields.EndDate || fields.End;
 
-                let nombreDeLaReunion = parseField(fields.Asunto || fields.asunto || fields.Title || fields.title).trim();
-                if (!nombreDeLaReunion) {
-                    nombreDeLaReunion = "Reunión Reservada";
-                }
+                let nombreDeLaReunion = parseField(fields.Asunto || fields.Title).trim();
+                if (!nombreDeLaReunion) nombreDeLaReunion = "Actividad Reservada";
 
-                // Filtro estable para procesar los registros de Junio
-                if (isEventInCurrentMonth(rawInicio) && columnaSalaRaw) {
+                if (columnaSalaRaw) {
                     let salaKey = "";
-                    
-                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio")) {
+                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
                         salaKey = "Sala Junta Directiva";
-                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1") || columnaSalaRaw === "1") {
+                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1")) {
                         salaKey = "Sala 1";
-                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2") || columnaSalaRaw === "2") {
+                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2")) {
                         salaKey = "Sala 2";
-                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3") || columnaSalaRaw === "3") {
+                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3")) {
                         salaKey = "Sala 3";
                     }
 
@@ -256,10 +227,9 @@
                         const horaInicioLimpia = formatISODateToHHMM(rawInicio);
                         const horaFinLimpia = formatISODateToHHMM(rawFin);
 
-                        // Evitamos meter reuniones duplicadas con la misma hora
                         if (!salasMapeadas[salaKey].agenda.some(m => m.title === nombreDeLaReunion && m.startTime === horaInicioLimpia)) {
                             salasMapeadas[salaKey].agenda.push({
-                                idMeet: `meet-${salaKey}-${index}`,
+                                idMeet: `sp-${salaKey}-${index}`,
                                 title: nombreDeLaReunion,
                                 startTime: horaInicioLimpia,
                                 endTime: horaFinLimpia
@@ -276,6 +246,37 @@
             renderDashboard();
         }
 
+        // 🛠️ FUNCIÓN DE INYECCIÓN MANUAL PARA LA PRESENTACIÓN (FALLBACK DEMO COMODÍN)
+        // Si los jefes quieren crear una reunión en vivo en la presentación y el puente automático sigue caído,
+        // abres la consola de la tablet/PC (F12) y escribes por ejemplo:
+        // crearReunionPrueba("Reunión de Rectoría", "Sala Junta Directiva", "15:00", "16:30")
+        window.crearReunionPrueba = function(titulo, salaNombre, horaInicio, horaFin) {
+            const mockItem = {
+                Sala: salaNombre,
+                Title: titulo,
+                HoraInicio: `2026-06-02T${horaInicio}:00Z`,
+                HoraFin: `2026-06-02T${horaFin}:00Z`
+            };
+            
+            console.log("Inyectando reunión de prueba en tiempo real...");
+            
+            // Si la estructura estaba vacía, recuperamos los elementos actuales y le sumamos el nuevo
+            let listaActual = [];
+            Object.keys(salasMapeadas).forEach(k => {
+                salasMapeadas[k].agenda.forEach(m => {
+                    listaActual.push({
+                        Sala: k,
+                        Title: m.title,
+                        HoraInicio: `2026-06-02T${m.startTime}:00Z`,
+                        HoraFin: `2026-06-02T${m.endTime}:00Z`
+                    });
+                });
+            });
+            
+            listaActual.push(mockItem);
+            processSharepointData(listaActual);
+        };
+
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
             if (!container) return;
@@ -284,7 +285,7 @@
             const salasAListar = ["Sala Junta Directiva", "Sala 1", "Sala 2", "Sala 3"];
 
             salasAListar.forEach(key => {
-                const sala = salasMapeadas[key];
+                const sala = salasMapeadas[key] || { displayName: key, agenda: [] };
                 const cardClass = "room-card";
                 const totalReuniones = sala.agenda.length;
                 const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
@@ -299,7 +300,7 @@
                 `;
 
                 if (totalReuniones === 0) {
-                    gridHTML += `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                    gridHTML += `<div class="no-meetings">No hay reuniones programadas para hoy en esta sala.</div>`;
                 } else {
                     sala.agenda.forEach(meet => {
                         gridHTML += `
@@ -321,9 +322,6 @@
             container.innerHTML = gridHTML;
         }
 
-        // Desactivada la expiración para evitar accidentes visuales en la demo
-        function checkMeetingsExpiration() { }
-
         function updateLiveDateTime() {
             const now = new Date();
             const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -332,15 +330,15 @@
 
             const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
             document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', timeOptions);
-
-            checkMeetingsExpiration();
         }
         
         window.onload = function() {
             updateLiveDateTime();
+            initSalas();
+            renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 20000);
+            setInterval(fetchSalasFromAPI, 15000); // Consulta la API real en segundo plano
         };
     </script>
 </body>
