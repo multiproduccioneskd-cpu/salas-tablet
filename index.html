@@ -174,23 +174,14 @@
             }
         }
 
-        // CORRECCIÓN MATEMÁTICA ESTILO JAVA DATE:
-        // En lugar de comparar solo el día de hoy estricto, mide la distancia por horas.
-        // Captura reuniones de hoy y absorbe hasta 12 horas del desfase nocturno UTC (Eventos hasta las 21:00 o más).
+        // Filtro de fecha amplio para capturar cualquier reunión del mes de Junio
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
                 const eventDate = new Date(isoString);
                 const today = new Date();
-                
-                // Calculamos la diferencia matemática en horas relativas
-                const diffTime = eventDate - today;
-                const diffHours = diffTime / (1000 * 60 * 60);
-
-                // Deja pasar eventos del mes actual que ocurran dentro del rango operativo diario
-                const mismoMes = eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear();
-                
-                return mismoMes && (diffHours >= -16 && diffHours <= 12);
+                return eventDate.getMonth() === today.getMonth() &&
+                       eventDate.getFullYear() === today.getFullYear();
             } catch (e) {
                 return false;
             }
@@ -206,7 +197,6 @@
 
         async function fetchSalasFromAPI() {
             try {
-                // Le inyectamos destructor de caché dinámico a tu consulta original para forzar actualización real
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`, {
                     cache: "no-store"
                 });
@@ -328,46 +318,10 @@
             container.innerHTML = gridHTML;
         }
 
+        // DESACTIVADO EL SCRIPT JODIDO: Se apaga la función de borrado automático
+        // para asegurar que las pruebas de la tarde se queden fijas en la pantalla de demo.
         function checkMeetingsExpiration() {
-            if (Object.keys(salasMapeadas).length === 0) return;
-            
-            Object.keys(salasMapeadas).forEach(key => {
-                const sala = salasMapeadas[key];
-                const now = new Date();
-                const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
-
-                for (let i = sala.agenda.length - 1; i >= 0; i--) {
-                    const meet = sala.agenda[i];
-                    const [startHour, startMin] = meet.startTime.split(':').map(Number);
-                    
-                    if (!isNaN(startHour) && !isNaN(startMin)) {
-                        const startMinutesTotal = (startHour * 60) + startMin;
-
-                        // Mantiene las reuniones visibles por más tiempo durante las pruebas de la tarde
-                        if (currentMinutesTotal >= (startMinutesTotal + 45)) {
-                            const element = document.getElementById(`meet-${meet.idMeet}`);
-                            if (element && !element.classList.contains('fade-out')) {
-                                element.classList.add('fade-out');
-
-                                setTimeout(() => {
-                                    sala.agenda = sala.agenda.filter(m => m.idMeet !== meet.idMeet);
-                                    element.remove();
-                                    
-                                    const total = sala.agenda.length;
-                                    document.getElementById('count-' + key).innerText = total === 0 ? "Disponible" : (total === 1 ? "1 Reunión" : `${total} Reuniones`);
-                                    
-                                    if (total === 0) {
-                                        const listContainer = document.getElementById(`list-${key}`);
-                                        if (listContainer) {
-                                            listContainer.innerHTML = `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
-                                        }
-                                    }
-                                }, 800);
-                            }
-                        }
-                    }
-                }
-            });
+            // Lógica pausada temporalmente por Pipe para la presentación
         }
 
         function updateLiveDateTime() {
