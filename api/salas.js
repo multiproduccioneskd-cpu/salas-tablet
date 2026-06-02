@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         if (!TOKEN) throw new Error("No se pudo generar el token de Graph API");
 
         // 2. Consultar los elementos de Sharepoint ordenados por fecha
-        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$top=100`, {
+       const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$orderby=createdDateTime desc&$top=100`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${TOKEN}` }
         });
