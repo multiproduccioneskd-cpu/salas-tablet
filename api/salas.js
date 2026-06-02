@@ -1,27 +1,28 @@
-// Agrega esto dentro de tu <script> en la función fetchSalasFromAPI
-async function fetchSalasFromAPI() {
-    const container = document.getElementById('roomsContainer');
+// api/salas.js - Backend optimizado y a prueba de errores
+export default async function handler(req, res) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
     try {
-        const response = await fetch(`/api/salas?refresh=${Date.now()}`);
-        if (!response.ok) throw new Error("API Falló");
+        // Usamos una URL estándar sin filtros complejos para asegurar la conexión
+        const sharepointUrl = `https://graph.microsoft.com/v1.0/sites/${process.env.SHAREPOINT_SITE_ID}/lists/${process.env.SHAREPOINT_LIST_ID}/items?expand=fields`;
         
-        const data = await response.json();
-        const items = Array.isArray(data) ? data : (data.value || []);
-        
-        if (items.length === 0) {
-            container.innerHTML = "<div style='color:white; text-align:center; width:100%;'>API conectada pero no hay eventos. Verifica SharePoint.</div>";
-        } else {
-            processSharepointData(items);
+        const response = await fetch(sharepointUrl, {
+            headers: {
+                'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Error ${response.status}: ${errorData}`);
         }
+
+        const data = await response.json();
+        return res.status(200).json(data);
+
     } catch (error) {
-        console.error("API Desconectada:", error);
-        container.innerHTML = `
-            <div style='color:#dda126; text-align:center; width:100%; padding:20px;'>
-                <h3>⚠️ Visor en Modo Manual</h3>
-                <p>La API no responde. Inyecta datos desde la consola (F12) con:</p>
-                <code style='background:#1b2a4a; padding:10px; display:block; margin-top:10px;'>
-                    crearReunionPrueba("Demo UGM", "Sala Junta Directiva", "19:00", "20:30")
-                </code>
-            </div>`;
+        console.error("Error crítico en API:", error);
+        return res.status(500).json({ error: "Fallo de conexión", detalles: error.message });
     }
 }
