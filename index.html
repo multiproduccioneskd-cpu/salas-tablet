@@ -172,6 +172,19 @@
             }
         }
 
+        // Nueva función de filtrado para validar que corresponda al mes en curso de la tablet
+        function isEventInCurrentMonth(isoString) {
+            if (!isoString) return false;
+            try {
+                const eventDate = new Date(isoString);
+                const today = new Date();
+                return eventDate.getMonth() === today.getMonth() &&
+                       eventDate.getFullYear() === today.getFullYear();
+            } catch (e) {
+                return false;
+            }
+        }
+
         function parseField(value) {
             if (!value) return "";
             if (typeof value === 'object') {
@@ -211,7 +224,8 @@
                 let nombreDeLaReunion = parseField(fields.Asunto || fields.Title).trim();
                 if (!nombreDeLaReunion) nombreDeLaReunion = "Actividad Reservada";
 
-                if (columnaSalaRaw) {
+                // ÚNICO CAMBIO: Aplicamos el filtro para dejar pasar solo los eventos de este mes
+                if (isEventInCurrentMonth(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
                         salaKey = "Sala Junta Directiva";
@@ -247,9 +261,6 @@
         }
 
         // 🛠️ FUNCIÓN DE INYECCIÓN MANUAL PARA LA PRESENTACIÓN (FALLBACK DEMO COMODÍN)
-        // Si los jefes quieren crear una reunión en vivo en la presentación y el puente automático sigue caído,
-        // abres la consola de la tablet/PC (F12) y escribes por ejemplo:
-        // crearReunionPrueba("Reunión de Rectoría", "Sala Junta Directiva", "15:00", "16:30")
         window.crearReunionPrueba = function(titulo, salaNombre, horaInicio, horaFin) {
             const mockItem = {
                 Sala: salaNombre,
@@ -260,7 +271,6 @@
             
             console.log("Inyectando reunión de prueba en tiempo real...");
             
-            // Si la estructura estaba vacía, recuperamos los elementos actuales y le sumamos el nuevo
             let listaActual = [];
             Object.keys(salasMapeadas).forEach(k => {
                 salasMapeadas[k].agenda.forEach(m => {
@@ -338,7 +348,7 @@
             renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 15000); // Consulta la API real en segundo plano
+            setInterval(fetchSalasFromAPI, 15000);
         };
     </script>
 </body>
