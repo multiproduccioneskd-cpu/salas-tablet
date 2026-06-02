@@ -204,44 +204,51 @@
 
                 const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
                 
-                // Mapeo dinámico y tolerante de las variables de fecha de inicio y fin
-                const rawInicio = String(fields.casillaTiempo || fields.HoraInicio || fields.EventDate || fields.Start || "");
+                // Mapeamos el string original de SharePoint
+                const rawInicio = fields.casillaTiempo || fields.HoraInicio || fields.EventDate || fields.Start || "";
                 const rawFin = fields.casillaTiempo || fields.HoraFin || fields.EndDate || fields.End;
 
                 let nombreDeLaReunion = parseField(fields.Asunto || fields.Title).trim();
                 if (!nombreDeLaReunion) nombreDeLaReunion = "Actividad Reservada";
 
-                // NUEVO ENFOQUE: Sin filtros restrictivos de fecha en el código.
-                // Todo lo que venga en la consulta API pasa directo si tiene una sala asignada.
-                if (columnaSalaRaw) {
-                    let salaKey = "";
-                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
-                        salaKey = "Sala Junta Directiva";
-                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1")) {
-                        salaKey = "Sala 1";
-                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2")) {
-                        salaKey = "Sala 2";
-                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3")) {
-                        salaKey = "Sala 3";
-                    }
+                if (rawInicio && columnaSalaRaw) {
+                    // LÓGICA ESTILO JAVA DATE: Convertimos el texto a una instancia matemática de Fecha
+                    const fechaObjeto = new Date(rawInicio);
+                    const fechaActual = new Date();
 
-                    if (salaKey && salasMapeadas[salaKey]) {
-                        const horaInicioLimpia = formatISODateToHHMM(rawInicio);
-                        const horaFinLimpia = formatISODateToHHMM(rawFin);
+                    // Comparamos numéricamente que el mes y año coincidan exactamente con la tablet (Junio = 5 en base 0)
+                    if (!isNaN(fechaObjeto.getTime()) && 
+                        fechaObjeto.getMonth() === fechaActual.getMonth() && 
+                        fechaObjeto.getFullYear() === fechaActual.getFullYear()) {
+                        
+                        let salaKey = "";
+                        if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
+                            salaKey = "Sala Junta Directiva";
+                        } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1")) {
+                            salaKey = "Sala 1";
+                        } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2")) {
+                            salaKey = "Sala 2";
+                        } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3")) {
+                            salaKey = "Sala 3";
+                        }
 
-                        if (!salasMapeadas[salaKey].agenda.some(m => m.title === nombreDeLaReunion && m.startTime === horaInicioLimpia)) {
-                            salasMapeadas[salaKey].agenda.push({
-                                idMeet: `sp-${salaKey}-${index}`,
-                                title: nombreDeLaReunion,
-                                startTime: horaInicioLimpia,
-                                endTime: horaFinLimpia
-                            });
+                        if (salaKey && salasMapeadas[salaKey]) {
+                            const horaInicioLimpia = formatISODateToHHMM(rawInicio);
+                            const horaFinLimpia = formatISODateToHHMM(rawFin);
+
+                            if (!salasMapeadas[salaKey].agenda.some(m => m.title === nombreDeLaReunion && m.startTime === horaInicioLimpia)) {
+                                salasMapeadas[salaKey].agenda.push({
+                                    idMeet: `sp-${salaKey}-${index}`,
+                                    title: nombreDeLaReunion,
+                                    startTime: horaInicioLimpia,
+                                    endTime: horaFinLimpia
+                                });
+                            }
                         }
                     }
                 }
             });
 
-            // Ordenamiento por horario
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
