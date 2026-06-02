@@ -209,6 +209,7 @@
         }
 
         function processSharepointData(items) {
+            // Inicializar las 4 salas mapeadas fijas
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
                 "Sala 1": { displayName: "Sala 1", agenda: [] },
@@ -220,28 +221,44 @@
                 const fields = item.fields;
                 if (!fields) return;
 
+                // 1. DÓNDE SE HACE (SALA)
                 const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
-                const rawInicio = fields.HoraInicio;
-                const rawFin = fields.HoraFin;
 
-                let nombreDeLaReunion = parseField(fields.Asunto || fields.asunto).trim();
-                if (!nombreDeLaReunion) {
-                    nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
+                // 2. HORARIOS (Soporte multivariable)
+                let rawInicio = fields.HoraInicio || fields.EventDate || fields.Start || "";
+                let rawFin = fields.HoraFin || fields.EndDate || fields.End || "";
+                
+                if (!rawInicio || !rawFin) {
+                    for (let key in fields) {
+                        const val = String(fields[key]);
+                        const k = key.toLowerCase();
+                        if (val.includes('T') && val.includes('Z')) { 
+                            if (k.includes('inicio') || k.includes('start')) rawInicio = val;
+                            if (k.includes('fin') || k.includes('end')) rawFin = val;
+                        }
+                    }
                 }
+
+                // 3. NOMBRE DE LA REUNIÓN (TÍTULO ESTRICTO)
+                let nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
                 if (!nombreDeLaReunion) {
                     nombreDeLaReunion = "Reunión Reservada";
                 }
 
+                // 4. ENRUTAMIENTO REFORZADO (Solo eventos de hoy)
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     
-                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio")) {
+                    // Mapeo blindado para la Sala de Junta Directiva
+                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
                         salaKey = "Sala Junta Directiva";
-                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1")) {
+                    } 
+                    // Mapeos para salas correlativas
+                    else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw === "1" || columnaSalaRaw.endsWith("1")) {
                         salaKey = "Sala 1";
-                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2")) {
+                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw === "2" || columnaSalaRaw.endsWith("2")) {
                         salaKey = "Sala 2";
-                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3")) {
+                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw === "3" || columnaSalaRaw.endsWith("3")) {
                         salaKey = "Sala 3";
                     }
 
@@ -259,6 +276,7 @@
                 }
             });
 
+            // Ordenar de forma cronológica por hora de inicio
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -331,6 +349,7 @@
                     if (!isNaN(startHour) && !isNaN(startMin)) {
                         const startMinutesTotal = (startHour * 60) + startMin;
 
+                        // Esconde el evento 20 minutos después de haber comenzado
                         if (currentMinutesTotal >= (startMinutesTotal + 20)) {
                             const element = document.getElementById(`meet-${meet.idMeet}`);
                             if (element && !element.classList.contains('fade-out')) {
@@ -374,7 +393,7 @@
             renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 20000);
+            setInterval(fetchSalasFromAPI, 20000); // Consulta la API de SharePoint cada 20 segundos
         };
     </script>
 </body>
