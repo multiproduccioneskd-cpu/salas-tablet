@@ -1,38 +1,27 @@
-// REEMPLAZA TU FUNCIÓN processSharepointData EN EL index.html POR ESTA:
-
-function processSharepointData(items) {
-    initSalas();
-    console.log("Datos recibidos de la API:", items); // <--- ESTO NOS DIRÁ LA VERDAD
-
-    items.forEach((item, index) => {
-        // Intentamos obtener los campos de varias formas posibles
-        const fields = item.fields || item; 
-        if (!fields) return;
-
-        const columnaSalaRaw = String(fields.Sala || fields.sala || "").toLowerCase().trim();
-        const rawInicio = fields.HoraInicio || fields.casillaTiempo || fields.EventDate || fields.Start || "";
-        const rawFin = fields.HoraFin || fields.EndDate || fields.End || "";
-
-        let nombreDeLaReunion = parseField(fields.Asunto || fields.Title || fields.title || "Reunión").trim();
-
-        // ELIMINAMOS EL FILTRO DE FECHA AQUÍ PARA QUE TODO LO QUE LLEGUE SE MUESTRE
-        if (columnaSalaRaw) {
-            let salaKey = "";
-            if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva")) salaKey = "Sala Junta Directiva";
-            else if (columnaSalaRaw.includes("1")) salaKey = "Sala 1";
-            else if (columnaSalaRaw.includes("2")) salaKey = "Sala 2";
-            else if (columnaSalaRaw.includes("3")) salaKey = "Sala 3";
-
-            if (salaKey && salasMapeadas[salaKey]) {
-                salasMapeadas[salaKey].agenda.push({
-                    idMeet: `sp-${index}`,
-                    title: nombreDeLaReunion,
-                    startTime: formatISODateToHHMM(rawInicio),
-                    endTime: formatISODateToHHMM(rawFin)
-                });
-            }
+// Agrega esto dentro de tu <script> en la función fetchSalasFromAPI
+async function fetchSalasFromAPI() {
+    const container = document.getElementById('roomsContainer');
+    try {
+        const response = await fetch(`/api/salas?refresh=${Date.now()}`);
+        if (!response.ok) throw new Error("API Falló");
+        
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (data.value || []);
+        
+        if (items.length === 0) {
+            container.innerHTML = "<div style='color:white; text-align:center; width:100%;'>API conectada pero no hay eventos. Verifica SharePoint.</div>";
+        } else {
+            processSharepointData(items);
         }
-    });
-
-    renderDashboard();
+    } catch (error) {
+        console.error("API Desconectada:", error);
+        container.innerHTML = `
+            <div style='color:#dda126; text-align:center; width:100%; padding:20px;'>
+                <h3>⚠️ Visor en Modo Manual</h3>
+                <p>La API no responde. Inyecta datos desde la consola (F12) con:</p>
+                <code style='background:#1b2a4a; padding:10px; display:block; margin-top:10px;'>
+                    crearReunionPrueba("Demo UGM", "Sala Junta Directiva", "19:00", "20:30")
+                </code>
+            </div>`;
+    }
 }
