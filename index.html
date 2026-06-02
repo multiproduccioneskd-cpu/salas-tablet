@@ -109,9 +109,6 @@
         .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; }
 
         .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
-        
-        /* Estilo para errores técnicos en pantalla */
-        .api-error-msg { color: #d9534f; font-weight: bold; font-style: normal !important; font-size: 12px !important; line-height: 1.4; }
 
         .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
@@ -149,7 +146,6 @@
 
     <script>
         let salasMapeadas = {};
-        let statusErrorAPI = false; // Nos avisa si la consulta falla
 
         function formatISODateToHHMM(isoString) {
             if (!isoString) return "00:00";
@@ -163,6 +159,7 @@
             }
         }
 
+        // Evalúa si corresponde estrictamente al día de hoy local (2 de junio)
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
@@ -186,28 +183,20 @@
 
         async function fetchSalasFromAPI() {
             try {
-                const response = await fetch('/api/salas');
+                // CANDADO ANTICACHÉ: Agrega un número único al link para romper el bloqueo de Vercel/Navegador
+                const antiCacheParam = new Date().getTime();
+                const response = await fetch(`/api/salas?t=${antiCacheParam}`);
                 const data = await response.json();
                 
-                console.log(">>> RESPUESTA CRUDA:", data);
-                
-                if (data && data.value && data.value.length > 0) {
-                    statusErrorAPI = false;
+                if (data && data.value) {
                     processSharepointData(data.value);
-                } else {
-                    // Si responde pero viene vacío (0 registros)
-                    statusErrorAPI = "vacio";
-                    renderDashboard();
                 }
             } catch (error) {
-                console.error("Error en la conexión:", error);
-                statusErrorAPI = "caido";
-                renderDashboard();
+                console.error("Error al conectar con la API interna:", error);
             }
         }
 
         function processSharepointData(items) {
-            // Reiniciamos las estructuras limpias
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
                 "Sala 1": { displayName: "Sala 1", agenda: [] },
@@ -228,10 +217,10 @@
                     nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
                 }
                 if (!nombreDeLaReunion) {
-                    nombreDeLaReunion = "Actividad Reservada";
+                    nombreDeLaReunion = "Reunión Reservada";
                 }
 
-                // Validación simple de fecha: procesar si coincide con el día de hoy
+                // Filtrado exclusivo para el día real de hoy
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
@@ -258,7 +247,6 @@
                 }
             });
 
-            // Ordenamiento cronológico
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -282,9 +270,7 @@
                 const sala = salasAListar[key];
                 const cardClass = "room-card";
                 const totalReuniones = sala.agenda.length;
-                
-                let countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
-                if (statusErrorAPI) countText = "Desconectado";
+                const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
 
                 gridHTML += `
                     <div class="${cardClass}">
@@ -295,12 +281,7 @@
                         <div class="meetings-list" id="list-${key}">
                 `;
 
-                // CONTROL DE DIAGNÓSTICO EN TIEMPO REAL
-                if (statusErrorAPI === "caido") {
-                    gridHTML += `<div class="no-meetings api-error-msg">⚠️ Error crítico de conexión.<br>La API intermedio en Vercel está caída o bloqueada.</div>`;
-                } else if (statusErrorAPI === "vacio") {
-                    gridHTML += `<div class="no-meetings api-error-msg">⚠️ Conexión exitosa, pero la lista de SharePoint no tiene ninguna fila creada hoy.</div>`;
-                } else if (totalReuniones === 0) {
+                if (totalReuniones === 0) {
                     gridHTML += `<div class="no-meetings">No hay reuniones programadas para hoy en esta sala.</div>`;
                 } else {
                     sala.agenda.forEach(meet => {
@@ -335,10 +316,10 @@
         
         window.onload = function() {
             updateLiveDateTime();
-            renderDashboard(); // Dibuja el esqueleto de inmediato
-            fetchSalasFromAPI(); // Llama a SharePoint
+            renderDashboard(); 
+            fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 15000); // Monitorea cada 15 segundos
+            setInterval(fetchSalasFromAPI, 20000);
         };
     </script>
 </body>
