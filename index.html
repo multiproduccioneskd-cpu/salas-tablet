@@ -3,94 +3,345 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Visor de Reuniones UGM</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
-        body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; background-position: center; background-attachment: fixed; background-color: #f4f6f9; color: #333; min-height: 100vh; display: flex; flex-direction: column; padding: 20px; }
-        .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 15px 30px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-left: 5px solid #dda126; }
-        .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(48%, 1fr)); gap: 20px; }
-        .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-top: 5px solid #1b2a4a; overflow: hidden; }
-        .room-title-bar { background: rgba(248, 249, 250, 0.8); padding: 15px 20px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; }
-        .meetings-list { padding: 15px 20px; max-height: 300px; overflow-y: auto; }
-        .meeting-item { padding: 10px 0; border-bottom: 1px solid #edf2f7; }
-        .time-box { background: #e2e8f0; padding: 3px 6px; border-radius: 4px; font-size: 12px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-color: #f4f6f9;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .main-header {
+            background: rgba(27, 42, 74, 0.95);
+            color: #ffffff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-left: 5px solid #dda126;
+        }
+
+        .header-left-block { display: flex; align-items: center; gap: 20px; }
+        .header-logo { width: 65px; height: auto; object-fit: contain; }
+        .header-text-group .title { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
+        .header-text-group .subtitle { font-size: 12px; color: #b0c4de; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+        .date-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: right;
+            line-height: 1.3;
+        }
+
+        .live-time { color: #52b3e5; display: block; font-size: 16px; margin-top: 2px; }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(48%, 1fr));
+            gap: 20px;
+            flex-grow: 1;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) { .rooms-grid { grid-template-columns: 1fr; } }
+
+        .room-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            border-top: 5px solid #1b2a4a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .room-card:hover { transform: translateY(-2px); }
+
+        .room-title-bar {
+            background: rgba(248, 249, 250, 0.8);
+            padding: 15px 20px;
+            border-bottom: 1px solid #eef2f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .room-name { font-size: 16px; font-weight: bold; color: #1b2a4a; }
+        .event-count { font-size: 11px; background: #1b2a4a; color: #fff; padding: 3px 8px; border-radius: 10px; font-weight: bold; }
+
+        .meetings-list { padding: 15px 20px; flex-grow: 1; overflow-y: auto; max-height: 280px; }
+
+        .meeting-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #edf2f7;
+            opacity: 1;
+            transform: scaleY(1);
+            transform-origin: top;
+            transition: opacity 0.8s ease, transform 0.8s ease, padding 0.8s ease, max-height 0.8s ease;
+            max-height: 100px; 
+        }
+
+        .meeting-item:last-child { border-bottom: none; }
+        .meeting-time { min-width: 95px; }
+        .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; text-align: center; }
+        .meeting-details { flex-grow: 1; padding-left: 15px; }
+        .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; }
+
+        .meeting-item.fade-out {
+            opacity: 0;
+            transform: scaleY(0);
+            padding-top: 0;
+            padding-bottom: 0;
+            max-height: 0;
+            border-bottom: none;
+        }
+
+        .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
+
+        .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
+        .brand-bar .color-2 { flex: 1; background-color: #52b3e5; }
+        .brand-bar .color-3 { flex: 1; background-color: #dda126; }
+        .footer-text { text-align: center; margin-top: 10px; font-size: 11px; color: #ffffff; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="main-header">
-        <div>
-            <h1>Visor de Reuniones UGM</h1>
+        <div class="header-left-block">
+            <img src="logo-blanco-celeste.png" alt="Logo UGM" class="header-logo">
+            <div class="header-text-group">
+                <div class="title">Visor de Reuniones UGM</div>
+                <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
+            </div>
         </div>
-        <div id="liveTime">00:00</div>
+        <div class="date-badge">
+            <span id="liveDate">Cargando fecha...</span>
+            <span id="liveTime" class="live-time">00:00:00</span>
+        </div>
     </div>
 
     <div class="rooms-grid" id="roomsContainer"></div>
 
+    <div>
+        <div class="brand-bar">
+            <div class="color-1"></div>
+            <div class="color-2"></div>
+            <div class="color-3"></div>
+        </div>
+        <div class="footer-text">Universidad Gabriela Mistral — Construyendo Nuestra Huella</div>
+    </div>
+
     <script>
-        // Carga directa y sin filtros
-        async function fetchSalas() {
+        let salasMapeadas = {};
+
+        function formatISODateToHHMM(isoString) {
+            if (!isoString) return "00:00";
             try {
-                const response = await fetch('/api/salas?t=' + Date.now());
-                const data = await response.json();
-                const items = Array.isArray(data) ? data : (data.value || []);
-                
-                const salas = {
-                    "Sala Junta Directiva": [],
-                    "Sala 1": [],
-                    "Sala 2": [],
-                    "Sala 3": []
-                };
-
-                items.forEach(item => {
-                    const fields = item.fields || item;
-                    // Normalización de nombres de campos (soporta cualquier formato)
-                    const sala = (fields.Sala || fields.sala || "").toString();
-                    const titulo = (fields.Asunto || fields.Title || fields.title || "Reunión").toString();
-                    const hora = (fields.HoraInicio || fields.casillaTiempo || fields.Start || "00:00").toString();
-                    
-                    let key = "";
-                    if (sala.toLowerCase().includes("junta")) key = "Sala Junta Directiva";
-                    else if (sala.includes("1")) key = "Sala 1";
-                    else if (sala.includes("2")) key = "Sala 2";
-                    else if (sala.includes("3")) key = "Sala 3";
-
-                    if (key) {
-                        salas[key].push({ titulo, hora });
-                    }
-                });
-
-                render(salas);
-            } catch (e) { console.error(e); }
-        }
-
-        function render(salas) {
-            const container = document.getElementById('roomsContainer');
-            container.innerHTML = "";
-            
-            for (const [nombre, eventos] of Object.entries(salas)) {
-                let html = `
-                    <div class="room-card">
-                        <div class="room-title-bar"><span>${nombre}</span></div>
-                        <div class="meetings-list">
-                `;
-                
-                eventos.forEach(ev => {
-                    html += `
-                        <div class="meeting-item">
-                            <span class="time-box">${ev.hora.substring(11, 16)}</span>
-                            <span>${ev.titulo}</span>
-                        </div>
-                    `;
-                });
-                
-                html += `</div></div>`;
-                container.innerHTML += html;
+                const dateObj = new Date(isoString);
+                const hours = String(dateObj.getHours()).padStart(2, '0');
+                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            } catch (e) {
+                return "00:00";
             }
         }
 
-        setInterval(fetchSalas, 10000);
-        fetchSalas();
+        // Filtro adaptado para el JSON de GitHub: Valida si corresponde al mes en curso (Junio)
+        function isEventInCurrentMonth(isoString) {
+            if (!isoString) return false;
+            try {
+                const eventDate = new Date(isoString);
+                const today = new Date();
+                return eventDate.getMonth() === today.getMonth() &&
+                       eventDate.getFullYear() === today.getFullYear();
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function parseField(value) {
+            if (!value) return "";
+            if (typeof value === 'object') {
+                return value.Value || value.Label || value.DisplayName || value.TermLabel || JSON.stringify(value);
+            }
+            return String(value);
+        }
+
+        async function fetchSalasFromAPI() {
+            try {
+                const response = await fetch(`/api/salas?refresh=${Date.now()}`, {
+                    cache: "no-store"
+                });
+                const data = await response.json();
+                
+                // Si viene del JSON de GitHub salas.js, la data puede venir directo en el array 
+                // o metido en data.value. El script ahora soporta ambas opciones para no romperse.
+                const itemsList = Array.isArray(data) ? data : (data.value || []);
+                if (itemsList.length > 0) {
+                    processSharepointData(itemsList);
+                }
+            } catch (error) {
+                console.error("Error al conectar con la API interna:", error);
+            }
+        }
+
+        function processSharepointData(items) {
+            salasMapeadas = {
+                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
+                "Sala 1": { displayName: "Sala 1", agenda: [] },
+                "Sala 2": { displayName: "Sala 2", agenda: [] },
+                "Sala 3": { displayName: "Sala 3", agenda: [] }
+            };
+
+            items.forEach((item, index) => {
+                // Doble soporte: lee directo del objeto (formato JSON salas.js) o de item.fields (SharePoint)
+                const fields = item.fields || item;
+                if (!fields) return;
+
+                const columnaSalaRaw = String(fields.Sala || fields.sala || "").toLowerCase().trim();
+                const rawInicio = fields.HoraInicio || fields.casillaTiempo || fields.EventDate || fields.Start;
+                const rawFin = fields.HoraFin || fields.EndDate || fields.End;
+
+                let nombreDeLaReunion = parseField(fields.Asunto || fields.asunto || fields.Title || fields.title).trim();
+                if (!nombreDeLaReunion) {
+                    nombreDeLaReunion = "Reunión Reservada";
+                }
+
+                // Filtro estable para procesar los registros de Junio
+                if (isEventInCurrentMonth(rawInicio) && columnaSalaRaw) {
+                    let salaKey = "";
+                    
+                    if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio")) {
+                        salaKey = "Sala Junta Directiva";
+                    } else if (columnaSalaRaw.includes("sala 1") || columnaSalaRaw.endsWith("1") || columnaSalaRaw === "1") {
+                        salaKey = "Sala 1";
+                    } else if (columnaSalaRaw.includes("sala 2") || columnaSalaRaw.endsWith("2") || columnaSalaRaw === "2") {
+                        salaKey = "Sala 2";
+                    } else if (columnaSalaRaw.includes("sala 3") || columnaSalaRaw.endsWith("3") || columnaSalaRaw === "3") {
+                        salaKey = "Sala 3";
+                    }
+
+                    if (salaKey && salasMapeadas[salaKey]) {
+                        const horaInicioLimpia = formatISODateToHHMM(rawInicio);
+                        const horaFinLimpia = formatISODateToHHMM(rawFin);
+
+                        // Evitamos meter reuniones duplicadas con la misma hora
+                        if (!salasMapeadas[salaKey].agenda.some(m => m.title === nombreDeLaReunion && m.startTime === horaInicioLimpia)) {
+                            salasMapeadas[salaKey].agenda.push({
+                                idMeet: `meet-${salaKey}-${index}`,
+                                title: nombreDeLaReunion,
+                                startTime: horaInicioLimpia,
+                                endTime: horaFinLimpia
+                            });
+                        }
+                    }
+                }
+            });
+
+            Object.keys(salasMapeadas).forEach(key => {
+                salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
+            });
+
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('roomsContainer');
+            if (!container) return;
+            
+            let gridHTML = "";
+            const salasAListar = ["Sala Junta Directiva", "Sala 1", "Sala 2", "Sala 3"];
+
+            salasAListar.forEach(key => {
+                const sala = salasMapeadas[key];
+                const cardClass = "room-card";
+                const totalReuniones = sala.agenda.length;
+                const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
+
+                gridHTML += `
+                    <div class="${cardClass}">
+                        <div class="room-title-bar">
+                            <span class="room-name">${sala.displayName}</span>
+                            <span class="event-count" id="count-${key}">${countText}</span>
+                        </div>
+                        <div class="meetings-list" id="list-${key}">
+                `;
+
+                if (totalReuniones === 0) {
+                    gridHTML += `<div class="no-meetings" id="empty-${key}">No hay reuniones programadas para hoy en esta sala.</div>`;
+                } else {
+                    sala.agenda.forEach(meet => {
+                        gridHTML += `
+                            <div class="meeting-item" id="${meet.idMeet}">
+                                <div class="meeting-time">
+                                    <span class="time-box">${meet.startTime} - ${meet.endTime}</span>
+                                </div>
+                                <div class="meeting-details">
+                                    <div class="meeting-title">${meet.title}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                gridHTML += `</div></div>`;
+            });
+
+            container.innerHTML = gridHTML;
+        }
+
+        // Desactivada la expiración para evitar accidentes visuales en la demo
+        function checkMeetingsExpiration() { }
+
+        function updateLiveDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            let dateStr = now.toLocaleDateString('es-CL', dateOptions);
+            document.getElementById('liveDate').innerText = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', timeOptions);
+
+            checkMeetingsExpiration();
+        }
+        
+        window.onload = function() {
+            updateLiveDateTime();
+            fetchSalasFromAPI();
+            setInterval(updateLiveDateTime, 1000);
+            setInterval(fetchSalasFromAPI, 20000);
+        };
     </script>
 </body>
 </html>
