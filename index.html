@@ -199,7 +199,19 @@
 
         function processSharepointData(items) {
             initSalas();
+// --- ORDENAMIENTO DE EMERGENCIA ---
+    // Invertimos el array para que los IDs más altos (eventos nuevos)
+    // queden al principio de la lista y se procesen primero.
+    if (Array.isArray(items)) {
+        items.sort((a, b) => {
+            const idA = parseInt(a.fields?.id || a.id || 0);
+            const idB = parseInt(b.fields?.id || b.id || 0);
+            return idB - idA; // Orden descendente
+        });
+    }
+    // ----------------------------------
 
+            
             items.forEach((item, index) => {
                 const fields = item.fields || item; // Soporta formato crudo e intermedio
                 if (!fields) return;
