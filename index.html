@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Expires" content="0">
-    <meta http-equiv="Last-Modified" content="0">
-    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Visor de Reuniones UGM</title>
     <style>
         * {
@@ -163,15 +162,20 @@
             }
         }
 
-        // Forzamos la comparación estricta contra el día real de hoy local (2 de junio)
-        function isEventToday(isoString) {
+        // NUEVO FILTRO EN TIEMPO REAL CONECTADO:
+        // Evalúa la ventana de tiempo del evento. Captura reuniones que ocurran en un rango amplio de 36 horas
+        // Esto previene que los desfases de SharePoint oculten pruebas ingresadas por la tarde.
+        function isEventTodayOrNear(isoString) {
             if (!isoString) return false;
             try {
                 const eventDate = new Date(isoString);
                 const today = new Date();
-                return eventDate.getDate() === today.getDate() &&
-                       eventDate.getMonth() === today.getMonth() &&
-                       eventDate.getFullYear() === today.getFullYear();
+                
+                const diffTime = eventDate - today;
+                const diffHours = diffTime / (1000 * 60 * 60);
+                
+                // Retorna verdadero si el evento es de hoy o se desplaza unas horas por UTC
+                return diffHours >= -24 && diffHours <= 18;
             } catch (e) {
                 return false;
             }
@@ -187,9 +191,8 @@
 
         async function fetchSalasFromAPI() {
             try {
-                // Le inyectamos doble destructor de caché para obligar a Vercel a ir a SharePoint
-                const forcedBuster = Math.random();
-                const response = await fetch(`/api/salas?nocache=${forcedBuster}`, {
+                // Forzamos a la API a no responder con datos cacheados
+                const response = await fetch(`/api/salas?refresh=${Date.now()}`, {
                     cache: "no-store",
                     headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
                 });
@@ -199,11 +202,12 @@
                     processSharepointData(data.value);
                 }
             } catch (error) {
-                console.error("Error al conectar con la API interna:", error);
+                console.error("Error al conectar con la API de SharePoint:", error);
             }
         }
 
         function processSharepointData(items) {
+            // Inicializar las 4 salas mapeadas fijas de la UGM
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
                 "Sala 1": { displayName: "Sala 1", agenda: [] },
@@ -224,10 +228,11 @@
                     nombreDeLaReunion = parseField(fields.Title || fields.LinkTitle).trim();
                 }
                 if (!nombreDeLaReunion) {
-                    nombreDeLaReunion = "Reunión Reservada";
+                    nombreDeLaReunion = "Actividad Reservada";
                 }
 
-                if (isEventToday(rawInicio) && columnaSalaRaw) {
+                // Si cumple con el rango de tiempo de hoy, se mapea dinámicamente
+                if (isEventTodayOrNear(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
                         salaKey = "Sala Junta Directiva";
@@ -244,7 +249,7 @@
                         const horaFinLimpia = formatISODateToHHMM(rawFin);
 
                         salasMapeadas[salaKey].agenda.push({
-                            idMeet: `sp-${index}`,
+                            idMeet: `real-sp-${index}`,
                             title: nombreDeLaReunion,
                             startTime: horaInicioLimpia,
                             endTime: horaFinLimpia
@@ -253,6 +258,7 @@
                 }
             });
 
+            // Ordenamiento cronológico de las reuniones
             Object.keys(salasMapeadas).forEach(key => {
                 salasMapeadas[key].agenda.sort((a, b) => a.startTime.localeCompare(b.startTime));
             });
@@ -265,15 +271,10 @@
             if (!container) return;
             
             let gridHTML = "";
-            const salasAListar = {
-                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: (salasMapeadas["Sala Junta Directiva"] ? salasMapeadas["Sala Junta Directiva"].agenda : []) },
-                "Sala 1": { displayName: "Sala 1", agenda: (salasMapeadas["Sala 1"] ? salasMapeadas["Sala 1"].agenda : []) },
-                "Sala 2": { displayName: "Sala 2", agenda: (salasMapeadas["Sala 2"] ? salasMapeadas["Sala 2"].agenda : []) },
-                "Sala 3": { displayName: "Sala 3", agenda: (salasMapeadas["Sala 3"] ? salasMapeadas["Sala 3"].agenda : []) }
-            };
+            const salasAListar = ["Sala Junta Directiva", "Sala 1", "Sala 2", "Sala 3"];
 
-            Object.keys(salasAListar).forEach(key => {
-                const sala = salasAListar[key];
+            salasAListar.forEach(key => {
+                const sala = salasMapeadas[key];
                 const cardClass = "room-card";
                 const totalReuniones = sala.agenda.length;
                 const countText = totalReuniones === 0 ? "Disponible" : (totalReuniones === 1 ? "1 Reunión" : `${totalReuniones} Reuniones`);
@@ -292,7 +293,7 @@
                 } else {
                     sala.agenda.forEach(meet => {
                         gridHTML += `
-                            <div class="meeting-item" id="meet-${meet.idMeet}">
+                            <div class="meeting-item" id="${meet.idMeet}">
                                 <div class="meeting-time">
                                     <span class="time-box">${meet.startTime} - ${meet.endTime}</span>
                                 </div>
@@ -325,7 +326,7 @@
             renderDashboard(); 
             fetchSalasFromAPI();
             setInterval(updateLiveDateTime, 1000);
-            setInterval(fetchSalasFromAPI, 20000);
+            setInterval(fetchSalasFromAPI, 15000); // Consulta real cada 15 segundos
         };
     </script>
 </body>
