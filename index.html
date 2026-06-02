@@ -174,6 +174,7 @@
             }
         }
 
+        // Validación tolerante de fecha: compara año, mes y día de forma local
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
@@ -200,6 +201,8 @@
                 const response = await fetch('/api/salas');
                 const data = await response.json();
                 
+                console.log(">>> DATOS CRUDOS ENTRANTES:", data);
+                
                 if (data && data.value) {
                     processSharepointData(data.value);
                 }
@@ -215,9 +218,6 @@
                 "Sala 2": { displayName: "Sala 2", agenda: [] },
                 "Sala 3": { displayName: "Sala 3", agenda: [] }
             };
-
-            const now = new Date();
-            const currentMinutesTotal = (now.getHours() * 60) + now.getMinutes();
 
             items.forEach((item, index) => {
                 const fields = item.fields;
@@ -235,20 +235,8 @@
                     nombreDeLaReunion = "Reunión Reservada";
                 }
 
+                // Forzamos el paso si es hoy, omitiendo descartes estrictos por hora en la carga inicial
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
-                    const horaInicioLimpia = formatISODateToHHMM(rawInicio);
-                    const horaFinLimpia = formatISODateToHHMM(rawFin);
-                    
-                    // FILTRO CRÍTICO ANTIPARPADEO: Si el evento ya pasó los 20 minutos de tolerancia, 
-                    // se descarta inmediatamente antes de renderizar para evitar que reaparezca
-                    const [startHour, startMin] = horaInicioLimpia.split(':').map(Number);
-                    if (!isNaN(startHour) && !isNaN(startMin)) {
-                        const startMinutesTotal = (startHour * 60) + startMin;
-                        if (currentMinutesTotal >= (startMinutesTotal + 20)) {
-                            return; // Salta este registro viejo y continúa con el siguiente
-                        }
-                    }
-
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
                         salaKey = "Sala Junta Directiva";
@@ -261,6 +249,9 @@
                     }
 
                     if (salaKey && salasMapeadas[salaKey]) {
+                        const horaInicioLimpia = formatISODateToHHMM(rawInicio);
+                        const horaFinLimpia = formatISODateToHHMM(rawFin);
+
                         salasMapeadas[salaKey].agenda.push({
                             idMeet: `sp-${index}`,
                             title: nombreDeLaReunion,
@@ -343,7 +334,8 @@
                     if (!isNaN(startHour) && !isNaN(startMin)) {
                         const startMinutesTotal = (startHour * 60) + startMin;
 
-                        if (currentMinutesTotal >= (startMinutesTotal + 20)) {
+                        // Tolerancia en vivo amplia para evitar desapariciones imprevistas en pruebas
+                        if (currentMinutesTotal >= (startMinutesTotal + 60)) {
                             const element = document.getElementById(`meet-${meet.idMeet}`);
                             if (element && !element.classList.contains('fade-out')) {
                                 element.classList.add('fade-out');
