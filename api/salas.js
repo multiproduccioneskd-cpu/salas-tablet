@@ -1,31 +1,38 @@
-// api/salas.js - Backend que conecta con SharePoint
+// REEMPLAZA TU FUNCIÓN processSharepointData EN EL index.html POR ESTA:
 
-export default async function handler(req, res) {
-    // Configuración para evitar que el navegador o Vercel guarden caché vieja
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+function processSharepointData(items) {
+    initSalas();
+    console.log("Datos recibidos de la API:", items); // <--- ESTO NOS DIRÁ LA VERDAD
 
-    try {
-        // AQUÍ ESTÁ EL TRUCO:
-        // Agregamos el parámetro ?$orderby=ID desc al final de la URL.
-        // Esto obliga a SharePoint a enviarte los eventos MÁS NUEVOS primero.
-        // Si SharePoint tiene un límite de respuesta, cortará los antiguos (mayo) 
-        // y dejará pasar tus pruebas de la tarde (junio).
-        
-        const sharepointUrl = "https://graph.microsoft.com/v1.0/sites/TU_SITE_ID/lists/TU_LIST_ID/items?expand=fields&$orderby=ID desc&$top=100";
-        
-        const response = await fetch(sharepointUrl, {
-            headers: {
-                'Authorization': `Bearer ${process.env.MICROSOFT_GRAPH_TOKEN}`,
-                'Accept': 'application/json'
+    items.forEach((item, index) => {
+        // Intentamos obtener los campos de varias formas posibles
+        const fields = item.fields || item; 
+        if (!fields) return;
+
+        const columnaSalaRaw = String(fields.Sala || fields.sala || "").toLowerCase().trim();
+        const rawInicio = fields.HoraInicio || fields.casillaTiempo || fields.EventDate || fields.Start || "";
+        const rawFin = fields.HoraFin || fields.EndDate || fields.End || "";
+
+        let nombreDeLaReunion = parseField(fields.Asunto || fields.Title || fields.title || "Reunión").trim();
+
+        // ELIMINAMOS EL FILTRO DE FECHA AQUÍ PARA QUE TODO LO QUE LLEGUE SE MUESTRE
+        if (columnaSalaRaw) {
+            let salaKey = "";
+            if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva")) salaKey = "Sala Junta Directiva";
+            else if (columnaSalaRaw.includes("1")) salaKey = "Sala 1";
+            else if (columnaSalaRaw.includes("2")) salaKey = "Sala 2";
+            else if (columnaSalaRaw.includes("3")) salaKey = "Sala 3";
+
+            if (salaKey && salasMapeadas[salaKey]) {
+                salasMapeadas[salaKey].agenda.push({
+                    idMeet: `sp-${index}`,
+                    title: nombreDeLaReunion,
+                    startTime: formatISODateToHHMM(rawInicio),
+                    endTime: formatISODateToHHMM(rawFin)
+                });
             }
-        });
+        }
+    });
 
-        const data = await response.json();
-        
-        // Enviamos la data al HTML
-        return res.status(200).json(data);
-
-    } catch (error) {
-        return res.status(500).json({ error: "Error conectando a SharePoint" });
-    }
+    renderDashboard();
 }
