@@ -1,7 +1,9 @@
 export default async function handler(req, res) {
+    // Sin caché para asegurar datos frescos
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     try {
+        // Obtenemos el token desde las variables de entorno
         const tokenResponse = await fetch(`https://login.microsoftonline.com/${process.env.TENANT_ID}/oauth2/v2.0/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -14,10 +16,9 @@ export default async function handler(req, res) {
         });
 
         const tokenData = await tokenResponse.json();
-        if (!tokenData.access_token) {
-            return res.status(500).json({ error: "Fallo al obtener token", detalles: tokenData });
-        }
+        if (!tokenData.access_token) throw new Error("Fallo al obtener token");
 
+        // URL ESTÁNDAR: Sin filtros, sin ordenamientos. La URL que siempre funcionó.
         const graphUrl = `https://graph.microsoft.com/v1.0/sites/${process.env.SHAREPOINT_SITE_ID}/lists/${process.env.SHAREPOINT_LIST_ID}/items?expand=fields`;
         
         const graphResponse = await fetch(graphUrl, {
@@ -25,17 +26,11 @@ export default async function handler(req, res) {
             headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
         });
 
-        // AQUÍ ESTÁ EL CAMBIO:
-        // Si no es un 200, leemos el texto del error en lugar de intentar parsear JSON
-        if (!graphResponse.ok) {
-            const errorText = await graphResponse.text();
-            return res.status(500).json({ error: "Graph API Error", detalles: errorText });
-        }
-
         const graphData = await graphResponse.json();
         return res.status(200).json(graphData);
 
     } catch (error) {
-        return res.status(500).json({ error: "Error de servidor", detalles: error.message });
+        console.error("Error en backend:", error);
+        return res.status(500).json({ error: error.message });
     }
 }
