@@ -7,29 +7,48 @@
     <title>Visor de Reuniones UGM</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
-        body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; background-position: center; background-attachment: fixed; background-color: #f4f6f9; color: #333; min-height: 100vh; display: flex; flex-direction: column; padding: 20px; }
-        .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 15px 30px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-left: 5px solid #dda126; }
-        .header-logo { width: 65px; height: auto; }
-        .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(48%, 1fr)); gap: 20px; }
-        .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; border-top: 5px solid #1b2a4a; overflow: hidden; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .room-title-bar { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; font-weight: bold; color: #1b2a4a; display: flex; justify-content: space-between; }
-        .meeting-item { padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; }
-        .time-box { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 10px; }
+        body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; background-position: center; background-attachment: fixed; background-color: #f4f6f9; color: #333; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
+        .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 15px 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-left: 5px solid #dda126; }
+        .header-left-block { display: flex; align-items: center; gap: 20px; }
+        .header-logo { width: 65px; height: auto; object-fit: contain; }
+        .title { font-size: 22px; font-weight: bold; }
+        .subtitle { font-size: 12px; color: #b0c4de; text-transform: uppercase; margin-top: 2px; }
+        .date-badge { background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; text-align: right; }
+        .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(48%, 1fr)); gap: 20px; flex-grow: 1; }
+        @media (max-width: 900px) { .rooms-grid { grid-template-columns: 1fr; } }
+        .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-top: 5px solid #1b2a4a; overflow: hidden; }
+        .room-title-bar { background: rgba(248, 249, 250, 0.8); padding: 15px 20px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; font-weight: bold; color: #1b2a4a; }
+        .meetings-list { padding: 15px 20px; max-height: 280px; overflow-y: auto; }
+        .meeting-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #edf2f7; }
+        .time-box { min-width: 95px; background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; text-align: center; }
+        .meeting-details { margin-left: 15px; font-size: 14px; font-weight: bold; color: #2d3748; }
+        .brand-bar { height: 5px; width: 100%; display: flex; margin-top: 10px; }
+        .color-1 { flex: 2; background-color: #1b2a4a; } .color-2 { flex: 1; background-color: #52b3e5; } .color-3 { flex: 1; background-color: #dda126; }
+        .footer-text { text-align: center; margin-top: 10px; font-size: 11px; color: #ffffff; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="main-header">
         <div class="header-left-block">
-            <div class="title">Visor de Reuniones UGM</div>
+            <img src="logo-blanco-celeste.png" alt="Logo UGM" class="header-logo">
+            <div class="header-text-group">
+                <div class="title">Visor de Reuniones UGM</div>
+                <div class="subtitle">Universidad Gabriela Mistral — Vista General</div>
+            </div>
         </div>
         <div class="date-badge">
-            <span id="liveDate">Cargando...</span>
-            <span id="liveTime" class="live-time">00:00:00</span>
+            <span id="liveDate">Cargando...</span><br>
+            <span id="liveTime">00:00:00</span>
         </div>
     </div>
 
     <div class="rooms-grid" id="roomsContainer"></div>
+
+    <div>
+        <div class="brand-bar"><div class="color-1"></div><div class="color-2"></div><div class="color-3"></div></div>
+        <div class="footer-text">Universidad Gabriela Mistral — Construyendo Nuestra Huella</div>
+    </div>
 
     <script>
         let salasMapeadas = {};
@@ -43,73 +62,40 @@
             };
         }
 
-        function formatISODateToHHMM(isoString) {
-            if (!isoString) return "00:00";
-            try {
-                const dateObj = new Date(isoString);
-                const hours = String(dateObj.getHours()).padStart(2, '0');
-                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                return `${hours}:${minutes}`;
-            } catch (e) { return "00:00"; }
-        }
-
         async function fetchSalasFromAPI() {
             try {
-                const response = await fetch(`/api/salas?refresh=${Date.now()}`, { cache: "no-store" });
+                const response = await fetch(`/api/salas?t=${Date.now()}`);
                 const data = await response.json();
-                // Maneja tanto el array directo como data.value
-                const items = data.value || data;
-                if (Array.isArray(items)) {
-                    processSharepointData(items);
-                }
-            } catch (error) {
-                console.error("API Error, activando inyección manual...");
-            }
+                processSharepointData(data.value || data);
+            } catch (e) { console.error("Error API:", e); }
         }
 
         function processSharepointData(items) {
             initSalas();
-
-            // ORDENAMIENTO DE EMERGENCIA: Del más nuevo al más viejo
-            items.sort((a, b) => {
-                const idA = parseInt(a.fields?.id || a.id || 0);
-                const idB = parseInt(b.fields?.id || b.id || 0);
-                return idB - idA;
-            });
+            // ORDENAMIENTO: Invertimos para que los últimos eventos (ID más alto) queden primero
+            if (Array.isArray(items)) {
+                items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
+            }
 
             items.forEach((item, index) => {
-                const fields = item.fields || item;
-                if (!fields) return;
+                const f = item.fields || item;
+                if (!f) return;
+                const salaRaw = String(f.Sala || f.sala || "").toLowerCase();
+                const titulo = (f.Asunto || f.Title || f.title || "Reunión").trim();
+                const hora = (f.HoraInicio || f.casillaTiempo || f.Start || "").substring(11, 16);
+                
+                let key = "";
+                if (salaRaw.includes("junta")) key = "Sala Junta Directiva";
+                else if (salaRaw.includes("sala 1")) key = "Sala 1";
+                else if (salaRaw.includes("sala 2")) key = "Sala 2";
+                else if (salaRaw.includes("sala 3")) key = "Sala 3";
 
-                const salaRaw = String(fields.Sala || "").toLowerCase();
-                const horaInicio = fields.HoraInicio || fields.EventDate || fields.Start || "";
-                const horaFin = fields.HoraFin || fields.EndDate || fields.End || "";
-                const titulo = (fields.Asunto || fields.Title || "Actividad").trim();
-
-                let salaKey = "";
-                if (salaRaw.includes("junta")) salaKey = "Sala Junta Directiva";
-                else if (salaRaw.includes("sala 1")) salaKey = "Sala 1";
-                else if (salaRaw.includes("sala 2")) salaKey = "Sala 2";
-                else if (salaRaw.includes("sala 3")) salaKey = "Sala 3";
-
-                if (salaKey) {
-                    salasMapeadas[salaKey].agenda.push({
-                        title: titulo,
-                        startTime: formatISODateToHHMM(horaInicio),
-                        endTime: formatISODateToHHMM(horaFin)
-                    });
+                if (key && hora !== "") {
+                    salasMapeadas[key].agenda.push({ title: titulo, time: hora });
                 }
             });
             renderDashboard();
         }
-
-        window.crearReunionPrueba = function(titulo, salaNombre, hInicio, hFin) {
-            const mock = { Sala: salaNombre, Title: titulo, HoraInicio: `2026-06-02T${hInicio}:00Z`, HoraFin: `2026-06-02T${hFin}:00Z` };
-            let lista = [];
-            Object.keys(salasMapeadas).forEach(k => salasMapeadas[k].agenda.forEach(m => lista.push({Sala: k, Title: m.title, HoraInicio: `2026-06-02T${m.startTime}:00Z`})));
-            lista.push(mock);
-            processSharepointData(lista);
-        };
 
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
@@ -118,15 +104,23 @@
                 const sala = salasMapeadas[key];
                 container.innerHTML += `
                     <div class="room-card">
-                        <div class="room-title-bar"><span>${sala.displayName}</span><span>${sala.agenda.length} Reuniones</span></div>
-                        ${sala.agenda.map(m => `
-                            <div class="meeting-item">
-                                <span class="time-box">${m.startTime}-${m.endTime}</span>
-                                <span>${m.title}</span>
-                            </div>`).join('')}
+                        <div class="room-title-bar"><span>${sala.displayName}</span><span>${sala.agenda.length} Eventos</span></div>
+                        <div class="meetings-list">
+                            ${sala.agenda.map(m => `
+                                <div class="meeting-item">
+                                    <span class="time-box">${m.time}</span>
+                                    <div class="meeting-details">${m.title}</div>
+                                </div>`).join('')}
+                        </div>
                     </div>`;
             });
         }
+
+        // Comando para inyectar en vivo durante la demo si la API falla
+        window.crearReunionPrueba = (t, s, h) => {
+            if (salasMapeadas[s]) salasMapeadas[s].agenda.push({ title: t, time: h });
+            renderDashboard();
+        };
 
         setInterval(() => {
             const now = new Date();
