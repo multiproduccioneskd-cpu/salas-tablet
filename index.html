@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="0">
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <title>Visor de Reuniones UGM</title>
     <style>
         * {
@@ -159,7 +163,7 @@
             }
         }
 
-        // Evalúa si corresponde estrictamente al día de hoy local (2 de junio)
+        // Forzamos la comparación estricta contra el día real de hoy local (2 de junio)
         function isEventToday(isoString) {
             if (!isoString) return false;
             try {
@@ -183,9 +187,12 @@
 
         async function fetchSalasFromAPI() {
             try {
-                // CANDADO ANTICACHÉ: Agrega un número único al link para romper el bloqueo de Vercel/Navegador
-                const antiCacheParam = new Date().getTime();
-                const response = await fetch(`/api/salas?t=${antiCacheParam}`);
+                // Le inyectamos doble destructor de caché para obligar a Vercel a ir a SharePoint
+                const forcedBuster = Math.random();
+                const response = await fetch(`/api/salas?nocache=${forcedBuster}`, {
+                    cache: "no-store",
+                    headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+                });
                 const data = await response.json();
                 
                 if (data && data.value) {
@@ -220,7 +227,6 @@
                     nombreDeLaReunion = "Reunión Reservada";
                 }
 
-                // Filtrado exclusivo para el día real de hoy
                 if (isEventToday(rawInicio) && columnaSalaRaw) {
                     let salaKey = "";
                     if (columnaSalaRaw.includes("junta") || columnaSalaRaw.includes("directiva") || columnaSalaRaw.includes("directorio") || columnaSalaRaw.includes("juntas")) {
