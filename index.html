@@ -53,39 +53,40 @@
 
         function processSharepointData(items) {
             const ahora = getChileanDate();
-            // Formato YYYY-MM-DD para comparar sin errores de zona horaria
+            // Comparamos usando el formato ISO YYYY-MM-DD para evitar errores de zona horaria
             const hoyStr = ahora.toISOString().split('T')[0];
             const minActuales = ahora.getHours() * 60 + ahora.getMinutes();
             const salas = { "Sala Junta Directiva": [], "Sala 1": [], "Sala 2": [], "Sala 3": [] };
 
+            // Procesamos todos los items recibidos
             items.forEach(item => {
                 const f = item.fields || item;
                 if (!f.HoraInicio) return;
                 
-                // Convertir fecha de SharePoint a YYYY-MM-DD
                 const d = new Date(f.HoraInicio);
                 const fechaEventoStr = d.toISOString().split('T')[0];
 
-                // Depuración visual para detectar si está tomando el día correcto
                 if (fechaEventoStr !== hoyStr) return;
 
                 const inicioMinutos = d.getHours() * 60 + d.getMinutes();
                 const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 60));
                 
                 let s = String(f.Sala || "").toLowerCase();
-                let key = s.includes("junta") ? "Sala Junta Directiva" : 
-                          s.includes("sala 1") ? "Sala 1" : 
-                          s.includes("sala 2") ? "Sala 2" : 
-                          s.includes("sala 3") ? "Sala 3" : null;
+                let key = s.includes("junta") ? "Sala Junta Directiva" : s.includes("sala 1") ? "Sala 1" : s.includes("sala 2") ? "Sala 2" : s.includes("sala 3") ? "Sala 3" : null;
 
                 if (key) {
                     salas[key].push({ 
                         title: f.Title || f.Asunto || "Actividad", 
                         startTime: `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`, 
+                        sortTime: d.getTime(), // Para ordenar
                         esEnCurso 
                     });
                 }
             });
+
+            // Ordenamos cada sala por hora de inicio
+            Object.keys(salas).forEach(k => salas[k].sort((a,b) => a.sortTime - b.sortTime));
+            
             return salas;
         }
 
