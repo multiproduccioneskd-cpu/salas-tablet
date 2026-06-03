@@ -1,4 +1,3 @@
-// api/salas.js - Backend intermediario seguro
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -14,56 +13,30 @@ export default async function handler(req, res) {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                scope: 'https://graph.microsoft.com/.default',
-                grant_type: 'client_credentials'
+                client_id: CLIENT_ID, client_secret: CLIENT_SECRET,
+                scope: 'https://graph.microsoft.com/.default', grant_type: 'client_credentials'
             })
         });
-        
         const tokenData = await tokenResponse.json();
         const TOKEN = tokenData.access_token;
 
-        if (!TOKEN) throw new Error("No se pudo generar el token de Graph API");
+        // Función para traer todas las páginas de la lista
+        let allItems = [];
+        let url = `https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$top=100`;
 
-        // Solicitud ampliada: añadimos IdType=ImmutableId para evitar pérdida de datos
-        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$top=100`, {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${TOKEN}`,
-                'Prefer': 'HonorNonIndexedQueries, IdType=ImmutableId' 
-            }
-        });
-        
-        const graphData = await graphResponse.json();
-
-        // LOG DE DIAGNÓSTICO (Revisa esto en los logs de tu servidor/Vercel)
-        console.log("DEBUG API - Elementos recibidos:", graphData.value ? graphData.value.length : 0);
-        if (graphData.value && graphData.value.length > 0) {
-            console.log("DEBUG API - Ejemplo de un campo:", JSON.stringify(graphData.value[0].fields));
-        }
-
-        // Procesamiento de fechas a hora local de Chile
-        if (graphData.value && Array.isArray(graphData.value)) {
-            graphData.value = graphData.value.map(item => {
-                // Aquí normalizamos las fechas. Si tu campo es 'HoraInicio', asegúrate de que exista en 'fields'
-                const fechaCampo = item.fields?.HoraInicio || item.fields?.Start || item.fields?.FechaReserva;
-                
-                if (fechaCampo) { 
-                    item.fields.FechaFormateada = new Date(fechaCampo).toLocaleString('es-CL', { 
-                        timeZone: 'America/Santiago',
-                        hour12: false 
-                    });
-                }
-                return item;
+        while (url) {
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${TOKEN}`, 'Prefer': 'HonorNonIndexedQueries, IdType=ImmutableId' }
             });
+            const data = await response.json();
+            if (data.value) allItems = allItems.concat(data.value);
+            url = data['@odata.nextLink']; // Si hay más, la API nos da la URL
         }
 
-        // Responder al frontend
-        return res.status(200).json(graphData);
+        console.log("Total eventos recolectados:", allItems.length);
+        return res.status(200).json({ value: allItems });
 
     } catch (error) {
-        console.error("Error en API:", error);
         return res.status(500).json({ error: error.message });
     }
 }
