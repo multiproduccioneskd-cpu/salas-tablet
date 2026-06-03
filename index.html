@@ -47,50 +47,45 @@
             try {
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`);
                 const data = await response.json();
+                // Filtramos y renderizamos
                 renderDashboard(processSharepointData(data.value || []));
             } catch (e) { console.error("Error API:", e); }
         }
 
         function processSharepointData(items) {
             const ahora = getChileanDate();
-            const hoyStr = ahora.toISOString().split('T')[0]; // YYYY-MM-DD
-            const minActuales = ahora.getHours() * 60 + ahora.getMinutes();
+            const hoyStr = ahora.toLocaleDateString('es-CL');
+            const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
             const salas = { "Sala Junta Directiva": [], "Sala 1": [], "Sala 2": [], "Sala 3": [] };
 
             items.forEach(item => {
                 const f = item.fields || item;
                 if (!f.HoraInicio) return;
                 
-                const d = new Date(f.HoraInicio);
-                const fechaEventoStr = d.toISOString().split('T')[0];
+                const inicio = new Date(f.HoraInicio);
+                const fin = f.HoraFin ? new Date(f.HoraFin) : new Date(inicio.getTime() + 60 * 60000); // 1hr por defecto si no hay HoraFin
 
-                if (fechaEventoStr !== hoyStr) {
-                    console.log(`Evento "${f.Title}" ignorado: fecha ${fechaEventoStr} != hoy (${hoyStr})`);
-                    return;
-                }
+                // 1. Filtrar solo los de hoy
+                if (inicio.toLocaleDateString('es-CL') !== hoyStr) return;
 
-                const inicioMinutos = d.getHours() * 60 + d.getMinutes();
-                const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 60));
+                // 2. Filtrar pasados: Si la reunión terminó hace más de 5 minutos, la omitimos
+                const finMinutos = fin.getHours() * 60 + fin.getMinutes();
+                if (fin.getHours() * 60 + fin.getMinutes() < (minutosActuales - 5) && fin.getDate() === ahora.getDate()) return;
+
+                const inicioMinutos = inicio.getHours() * 60 + inicio.getMinutes();
+                const esEnCurso = (minutosActuales >= inicioMinutos && minutosActuales < finMinutos);
                 
                 let s = String(f.Sala || "").toLowerCase();
-                let key = s.includes("junta") ? "Sala Junta Directiva" : 
-                          s.includes("sala 1") ? "Sala 1" : 
-                          s.includes("sala 2") ? "Sala 2" : 
-                          s.includes("sala 3") ? "Sala 3" : null;
+                let key = s.includes("junta") ? "Sala Junta Directiva" : s.includes("sala 1") ? "Sala 1" : s.includes("sala 2") ? "Sala 2" : s.includes("sala 3") ? "Sala 3" : null;
 
                 if (key) {
                     salas[key].push({ 
                         title: f.Title || f.Asunto || "Actividad", 
-                        startTime: `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`, 
-                        sortVal: d.getTime(), 
+                        startTime: `${String(inicio.getHours()).padStart(2,'0')}:${String(inicio.getMinutes()).padStart(2,'0')}`, 
                         esEnCurso 
                     });
                 }
             });
-
-            // Ordenamos por hora
-            Object.keys(salas).forEach(k => salas[k].sort((a,b) => a.sortVal - b.sortVal));
-            
             return salas;
         }
 
@@ -120,7 +115,8 @@
         }, 1000);
         
         fetchSalasFromAPI();
-        setInterval(fetchSalasFromAPI, 30000);
+        // Cambiado a 30 minutos (1.800.000 ms)
+        setInterval(fetchSalasFromAPI, 1800000); 
     </script>
 </body>
 </html>
