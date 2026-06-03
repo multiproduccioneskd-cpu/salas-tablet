@@ -12,15 +12,19 @@
             background-attachment: fixed; min-height: 100vh; display: flex; 
             flex-direction: column; padding: 10px; overflow: hidden; 
         }
+        
         .main-header { background: #1b2a4a; color: #ffffff; padding: 8px 20px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .header-logo { height: 40px; width: auto; } 
+        
         .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex-grow: 1; }
         .room-card { background: rgba(255, 255, 255, 0.95); border-radius: 6px; border-top: 4px solid #1b2a4a; height: 350px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .room-title-bar { padding: 8px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
         .meetings-list { padding: 5px 15px; flex-grow: 1; overflow-y: auto; }
         .meeting-item { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; }
         .time-box { background: #e2e8f0; font-size: 10px; padding: 2px 6px; border-radius: 4px; min-width: 50px; text-align: center; }
         .meeting-title { font-size: 12px; font-weight: bold; color: #333; padding-left: 10px; }
+        
         .badge-disponible { background: #52b3e5; color: white; font-size: 9px; padding: 2px 8px; border-radius: 10px; }
         .badge-eventos { background: #1b2a4a; color: white; font-size: 9px; padding: 2px 8px; border-radius: 10px; }
         .badge-en-curso { background: #d9534f; color: white; font-size: 8px; padding: 1px 5px; border-radius: 4px; margin-left: 8px; animation: blink 1s infinite; }
@@ -47,15 +51,14 @@
             try {
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`);
                 const data = await response.json();
-                // Filtramos y renderizamos
                 renderDashboard(processSharepointData(data.value || []));
             } catch (e) { console.error("Error API:", e); }
         }
 
         function processSharepointData(items) {
             const ahora = getChileanDate();
+            const tiempoAhora = ahora.getTime();
             const hoyStr = ahora.toLocaleDateString('es-CL');
-            const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
             const salas = { "Sala Junta Directiva": [], "Sala 1": [], "Sala 2": [], "Sala 3": [] };
 
             items.forEach(item => {
@@ -63,29 +66,35 @@
                 if (!f.HoraInicio) return;
                 
                 const inicio = new Date(f.HoraInicio);
-                const fin = f.HoraFin ? new Date(f.HoraFin) : new Date(inicio.getTime() + 60 * 60000); // 1hr por defecto si no hay HoraFin
+                // Si HoraFin no existe, damos 1 hora de duración
+                const fin = f.HoraFin ? new Date(f.HoraFin) : new Date(inicio.getTime() + 60 * 60000);
 
-                // 1. Filtrar solo los de hoy
+                // 1. Solo reuniones de hoy
                 if (inicio.toLocaleDateString('es-CL') !== hoyStr) return;
 
-                // 2. Filtrar pasados: Si la reunión terminó hace más de 5 minutos, la omitimos
-                const finMinutos = fin.getHours() * 60 + fin.getMinutes();
-                if (fin.getHours() * 60 + fin.getMinutes() < (minutosActuales - 5) && fin.getDate() === ahora.getDate()) return;
+                // 2. Borrar reuniones pasadas: si terminaron hace más de 5 minutos, descartar
+                if (fin.getTime() < (tiempoAhora - (5 * 60000))) return;
 
-                const inicioMinutos = inicio.getHours() * 60 + inicio.getMinutes();
-                const esEnCurso = (minutosActuales >= inicioMinutos && minutosActuales < finMinutos);
+                const esEnCurso = (tiempoAhora >= inicio.getTime() && tiempoAhora <= fin.getTime());
                 
                 let s = String(f.Sala || "").toLowerCase();
-                let key = s.includes("junta") ? "Sala Junta Directiva" : s.includes("sala 1") ? "Sala 1" : s.includes("sala 2") ? "Sala 2" : s.includes("sala 3") ? "Sala 3" : null;
+                let key = s.includes("junta") ? "Sala Junta Directiva" : 
+                          s.includes("sala 1") ? "Sala 1" : 
+                          s.includes("sala 2") ? "Sala 2" : 
+                          s.includes("sala 3") ? "Sala 3" : null;
 
                 if (key) {
                     salas[key].push({ 
                         title: f.Title || f.Asunto || "Actividad", 
                         startTime: `${String(inicio.getHours()).padStart(2,'0')}:${String(inicio.getMinutes()).padStart(2,'0')}`, 
+                        sortTime: inicio.getTime(),
                         esEnCurso 
                     });
                 }
             });
+
+            // Ordenar por hora cada sala
+            Object.keys(salas).forEach(k => salas[k].sort((a,b) => a.sortTime - b.sortTime));
             return salas;
         }
 
@@ -115,7 +124,7 @@
         }, 1000);
         
         fetchSalasFromAPI();
-        // Cambiado a 30 minutos (1.800.000 ms)
+        // 30 minutos
         setInterval(fetchSalasFromAPI, 1800000); 
     </script>
 </body>
