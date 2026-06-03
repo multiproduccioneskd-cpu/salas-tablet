@@ -25,12 +25,10 @@
         .event-count { font-size: 11px; background: #1b2a4a; color: #fff; padding: 3px 8px; border-radius: 10px; font-weight: bold; }
         .meetings-list { padding: 15px 20px; flex-grow: 1; overflow-y: auto; max-height: 280px; }
         .meeting-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #edf2f7; }
-        .meeting-time { min-width: 95px; }
-        .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; text-align: center; }
+        .time-box { background: #e2e8f0; color: #1b2a4a; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; text-align: center; }
         .meeting-details { flex-grow: 1; padding-left: 15px; }
         .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; }
-        .no-meetings { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 120px; color: #718096; font-style: italic; font-size: 13px; text-align: center; }
-        .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .brand-bar { height: 5px; width: 100%; display: flex; border-radius: 4px; overflow: hidden; }
         .brand-bar .color-1 { flex: 2; background-color: #1b2a4a; }
         .brand-bar .color-2 { flex: 1; background-color: #52b3e5; }
         .brand-bar .color-3 { flex: 1; background-color: #dda126; }
@@ -48,7 +46,7 @@
             </div>
         </div>
         <div class="date-badge">
-            <span id="liveDate">Cargando fecha...</span>
+            <span id="liveDate">Cargando...</span>
             <span id="liveTime" class="live-time">00:00:00</span>
         </div>
     </div>
@@ -56,11 +54,7 @@
     <div class="rooms-grid" id="roomsContainer"></div>
 
     <div>
-        <div class="brand-bar">
-            <div class="color-1"></div>
-            <div class="color-2"></div>
-            <div class="color-3"></div>
-        </div>
+        <div class="brand-bar"><div class="color-1"></div><div class="color-2"></div><div class="color-3"></div></div>
         <div class="footer-text">Universidad Gabriela Mistral — Construyendo Nuestra Huella</div>
     </div>
 
@@ -76,20 +70,13 @@
             };
         }
 
-        function formatISODateToHHMM(isoString) {
-            if (!isoString) return "00:00";
-            try {
-                const dateObj = new Date(isoString);
-                const hours = String(dateObj.getHours()).padStart(2, '0');
-                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                return `${hours}:${minutes}`;
-            } catch (e) { return "00:00"; }
-        }
-
-        function parseField(value) {
-            if (!value) return "";
-            if (typeof value === 'object') return value.Value || value.Label || value.DisplayName || JSON.stringify(value);
-            return String(value);
+        // Formato original recuperado
+        function updateLiveDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            let dateStr = now.toLocaleDateString('es-CL', dateOptions);
+            document.getElementById('liveDate').innerText = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+            document.getElementById('liveTime').innerText = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         }
 
         async function fetchSalasFromAPI() {
@@ -97,41 +84,38 @@
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`);
                 const data = await response.json();
                 if (data && data.value) processSharepointData(data.value);
-            } catch (error) { console.error("Error en API:", error); }
+            } catch (e) { console.error("Error API:", e); }
         }
 
         function processSharepointData(items) {
             initSalas();
+            const hoy = new Date().toISOString().split('T')[0]; // Fecha actual para comparar
 
-            // ORDENAMIENTO: Invertimos para que los ID más altos queden al principio
+            // Invertir ID para nuevos primero
             if (Array.isArray(items)) {
                 items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
             }
 
             items.forEach((item, index) => {
-                const fields = item.fields || item;
-                if (!fields) return;
+                const f = item.fields || item;
+                if (!f) return;
 
-                const columnaSalaRaw = String(fields.Sala || "").toLowerCase().trim();
-                const rawInicio = fields.HoraInicio || fields.EventDate || fields.Start;
-                const rawFin = fields.HoraFin || fields.EndDate || fields.End;
-                let nombreDeLaReunion = parseField(fields.Asunto || fields.Title).trim();
+                // FILTRO ESTRICTO: Solo eventos de hoy
+                const fechaEvento = (f.HoraInicio || f.Start || "").split('T')[0];
+                if (fechaEvento !== hoy) return;
 
-                let salaKey = "";
-                if (columnaSalaRaw.includes("junta")) salaKey = "Sala Junta Directiva";
-                else if (columnaSalaRaw.includes("sala 1")) salaKey = "Sala 1";
-                else if (columnaSalaRaw.includes("sala 2")) salaKey = "Sala 2";
-                else if (columnaSalaRaw.includes("sala 3")) salaKey = "Sala 3";
+                const salaRaw = String(f.Sala || "").toLowerCase().trim();
+                let salaKey = salaRaw.includes("junta") ? "Sala Junta Directiva" : 
+                              salaRaw.includes("sala 1") ? "Sala 1" : 
+                              salaRaw.includes("sala 2") ? "Sala 2" : 
+                              salaRaw.includes("sala 3") ? "Sala 3" : "";
 
                 if (salaKey) {
-                    salasMapeadas[salaKey].agenda.push({
-                        title: nombreDeLaReunion || "Actividad",
-                        startTime: formatISODateToHHMM(rawInicio),
-                        endTime: formatISODateToHHMM(rawFin)
-                    });
+                    const horaInicio = (f.HoraInicio || f.Start || "").substring(11, 16);
+                    const horaFin = (f.HoraFin || f.End || "").substring(11, 16);
+                    salasMapeadas[salaKey].agenda.push({ title: (f.Asunto || f.Title || "Actividad").trim(), startTime: horaInicio, endTime: horaFin });
                 }
             });
-
             renderDashboard();
         }
 
@@ -144,25 +128,21 @@
                     <div class="room-card">
                         <div class="room-title-bar">
                             <span class="room-name">${sala.displayName}</span>
-                            <span class="event-count">${sala.agenda.length} Eventos</span>
+                            <span class="event-count">${sala.agenda.length} Reuniones</span>
                         </div>
                         <div class="meetings-list">
-                            ${sala.agenda.map(m => `
+                            ${sala.agenda.length > 0 ? sala.agenda.map(m => `
                                 <div class="meeting-item">
-                                    <div class="meeting-time"><span class="time-box">${m.startTime}-${m.endTime}</span></div>
+                                    <span class="time-box">${m.startTime} - ${m.endTime}</span>
                                     <div class="meeting-details"><div class="meeting-title">${m.title}</div></div>
-                                </div>`).join('')}
+                                </div>`).join('') : '<div class="no-meetings">Sin reuniones programadas para hoy.</div>'}
                         </div>
                     </div>`;
             });
         }
 
-        setInterval(() => {
-            const n = new Date();
-            document.getElementById('liveDate').innerText = n.toLocaleDateString();
-            document.getElementById('liveTime').innerText = n.toLocaleTimeString();
-        }, 1000);
-        
+        setInterval(updateLiveDateTime, 1000);
+        updateLiveDateTime();
         fetchSalasFromAPI();
         setInterval(fetchSalasFromAPI, 15000);
     </script>
