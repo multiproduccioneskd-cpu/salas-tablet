@@ -62,22 +62,31 @@
 
         function processSharepointData(items) {
             initSalas();
-            const hoy = new Date().toISOString().split('T')[0];
-            const ahora = new Date();
-            const minActuales = (ahora.getHours() * 60 + ahora.getMinutes());
+            // Convertimos la hora actual a zona de Chile
+            const ahoraChile = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Santiago"}));
+            const hoy = ahoraChile.toISOString().split('T')[0];
+            const minActuales = (ahoraChile.getHours() * 60 + ahoraChile.getMinutes());
 
             items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
 
-            items.forEach((item, index) => {
+            items.forEach((item) => {
                 const f = item.fields || item;
                 if (!f) return;
 
                 const fechaRaw = f.HoraInicio || f.Start || "";
-                if (fechaRaw.split('T')[0] !== hoy) return;
+                if (!fechaRaw) return;
 
-                const horaStr = fechaRaw.substring(11, 16);
-                const [h, m] = horaStr.split(':').map(Number);
-                const inicioMinutos = h * 60 + m;
+                // Ajustamos la fecha del evento a zona de Chile
+                const fechaEvento = new Date(new Date(fechaRaw).toLocaleString("en-US", {timeZone: "America/Santiago"}));
+                
+                // Filtramos por fecha actual
+                if (fechaEvento.toISOString().split('T')[0] !== hoy) return;
+
+                const hh = String(fechaEvento.getHours()).padStart(2, '0');
+                const mm = String(fechaEvento.getMinutes()).padStart(2, '0');
+                const horaStr = `${hh}:${mm}`;
+                
+                const inicioMinutos = fechaEvento.getHours() * 60 + fechaEvento.getMinutes();
                 const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 90));
 
                 let s = String(f.Sala || "").toLowerCase();
