@@ -1,14 +1,13 @@
-// api/salas.js - Backend optimizado para lectura de eventos
+// api/salas.js - Backend optimizado para lectura amplia
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
 
-    // IMPORTANTE: En producción/GitHub, estas variables deben venir de process.env
-    // Nunca subas secretos reales a GitHub.
+    // Usamos variables de entorno para seguridad en GitHub
     const TENANT_ID = process.env.AZURE_TENANT_ID;
     const CLIENT_ID = process.env.AZURE_CLIENT_ID;
     const CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET;
-    const SITE_ID = process.env.SITE_ID; 
+    const SITE_ID = process.env.SITE_ID;
     const LIST_ID = process.env.LIST_ID;
 
     try {
@@ -27,14 +26,14 @@ export default async function handler(req, res) {
         const tokenData = await tokenResponse.json();
         if (!tokenData.access_token) throw new Error("Error al obtener token");
 
-        // 2. Consultar eventos
-        // Usamos el endpoint /events que es el correcto para calendarios
-        // Esto captura los cambios en tiempo real mejor que /items
-        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/events?$orderby=start/dateTime desc&$top=50`, {
+        // 2. Consultar los elementos de Sharepoint
+        // Hemos quitado el '$orderby' para evitar que SharePoint filtre por fechas indexadas
+        // Hemos dejado '$top=100' y añadido 'HonorNonIndexedQueries' para máxima visibilidad
+        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$top=100`, {
             method: 'GET',
             headers: { 
                 'Authorization': `Bearer ${tokenData.access_token}`,
-                'Prefer': 'HonorNonIndexedQueries' // Fuerza lectura sin esperar al índice de búsqueda
+                'Prefer': 'HonorNonIndexedQueries' 
             }
         });
         
@@ -47,6 +46,7 @@ export default async function handler(req, res) {
         return res.status(200).json(graphData);
 
     } catch (error) {
+        console.error("Error en /api/salas:", error.message);
         return res.status(500).json({ error: error.message });
     }
 }
