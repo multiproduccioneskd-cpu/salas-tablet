@@ -7,47 +7,16 @@
     <title>Visor de Reuniones UGM</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
-        body { 
-            background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); 
-            background-size: cover; 
-            padding: 10px; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
+        body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 5px solid #dda126; }
-        .header-left-block { display: flex; align-items: center; gap: 15px; }
         .header-logo { width: 50px; }
-        .title { font-size: 18px; font-weight: bold; }
-        .date-badge { background: rgba(255, 255, 255, 0.15); padding: 5px 15px; border-radius: 4px; font-size: 12px; text-align: right; }
-        .live-time { color: #52b3e5; display: block; font-size: 14px; }
+        .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; flex-grow: 1; height: calc(100vh - 90px); }
         
-        /* Grid dinámico que se ajusta a la pantalla */
-        .rooms-grid { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 15px; 
-            flex-grow: 1; 
-            height: calc(100vh - 90px);
-        }
-        
-        .room-card { 
-            background: rgba(255, 255, 255, 0.94); 
-            border-radius: 8px; 
-            border-top: 4px solid #1b2a4a; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
-        }
-        
+        .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; border-top: 4px solid #1b2a4a; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
         .room-title-bar { padding: 10px 15px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; align-items: center; }
-        .room-name { font-size: 15px; font-weight: bold; color: #1b2a4a; }
-        .event-count { font-size: 10px; background: #1b2a4a; color: #fff; padding: 2px 8px; border-radius: 10px; }
-        
         .meetings-list { flex-grow: 1; overflow-y: auto; padding: 5px 15px; }
+        
         .meeting-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
         .time-box { background: #e2e8f0; font-size: 10px; font-weight: bold; padding: 3px 6px; border-radius: 4px; min-width: 80px; text-align: center; }
         .meeting-title { font-size: 12px; font-weight: bold; color: #2d3748; padding-left: 10px; }
@@ -58,13 +27,13 @@
 </head>
 <body>
     <div class="main-header">
-        <div class="header-left-block">
+        <div style="display:flex; align-items:center; gap:15px;">
             <img src="logo-blanco-celeste.png" alt="Logo" class="header-logo">
-            <div class="title">Visor de Reuniones UGM</div>
+            <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
         </div>
-        <div class="date-badge">
+        <div style="background:rgba(255,255,255,0.15); padding:5px 15px; border-radius:4px; font-size:12px; text-align:right;">
             <span id="liveDate">Cargando...</span>
-            <span id="liveTime" class="live-time">00:00:00</span>
+            <span id="liveTime" style="color:#52b3e5; display:block; font-size:14px;">00:00:00</span>
         </div>
     </div>
 
@@ -93,8 +62,9 @@
         function processSharepointData(items) {
             initSalas();
             const ahora = new Date();
-            const hoy = ahora.toISOString().split('T')[0];
-            const minActuales = ahora.getHours() * 60 + ahora.getMinutes();
+            // Comparar fecha local de Chile (ajustada -4h)
+            const hoy = new Date(ahora.getTime() - (4 * 60 * 60 * 1000)).toISOString().split('T')[0];
+            const minActuales = (ahora.getHours() * 60 + ahora.getMinutes());
 
             items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
 
@@ -102,17 +72,24 @@
                 const f = item.fields || item;
                 if (!f) return;
 
-                if ((f.HoraInicio || f.Start || "").split('T')[0] !== hoy) return;
+                // Ajustar evento a hora de Chile
+                const fechaOriginal = new Date(f.HoraInicio || f.Start || "");
+                const fechaAjustada = new Date(fechaOriginal.getTime() - (4 * 60 * 60 * 1000));
+                
+                if (fechaAjustada.toISOString().split('T')[0] !== hoy) return;
 
-                const inicioStr = (f.HoraInicio || f.Start || "").substring(11, 16);
-                const [hI, mI] = inicioStr.split(':').map(Number);
-                const inicioMinutos = hI * 60 + mI;
+                const horaStr = fechaAjustada.getHours().toString().padStart(2, '0') + ":" + fechaAjustada.getMinutes().toString().padStart(2, '0');
+                const inicioMinutos = fechaAjustada.getHours() * 60 + fechaAjustada.getMinutes();
                 const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 90));
 
                 let s = String(f.Sala || "").toLowerCase();
-                let k = s.includes("junta") ? "Sala Junta Directiva" : s.includes("sala 1") ? "Sala 1" : s.includes("sala 2") ? "Sala 2" : s.includes("sala 3") ? "Sala 3" : "";
+                // Filtro ampliado para incluir cualquier variante de "Junta"
+                let k = (s.includes("junta") || s.includes("directiva") || s.includes("directorio")) ? "Sala Junta Directiva" : 
+                        s.includes("sala 1") ? "Sala 1" : 
+                        s.includes("sala 2") ? "Sala 2" : 
+                        s.includes("sala 3") ? "Sala 3" : "";
 
-                if (k) salasMapeadas[k].agenda.push({ title: (f.Asunto || f.Title || "Actividad").trim(), startTime: inicioStr, esEnCurso });
+                if (k) salasMapeadas[k].agenda.push({ title: (f.Asunto || f.Title || "Actividad").trim(), startTime: horaStr, esEnCurso });
             });
             renderDashboard();
         }
@@ -126,7 +103,9 @@
                     <div class="room-card">
                         <div class="room-title-bar">
                             <span style="font-weight:bold; color:#1b2a4a; font-size:15px;">${sala.displayName}</span>
-                            <span class="event-count">${sala.agenda.length > 0 ? sala.agenda.length + ' Eventos' : 'Disponible'}</span>
+                            <span style="font-size:10px; background:#1b2a4a; color:white; padding:2px 8px; border-radius:10px;">
+                                ${sala.agenda.length > 0 ? sala.agenda.length + ' Eventos' : 'Disponible'}
+                            </span>
                         </div>
                         <div class="meetings-list">
                             ${sala.agenda.length > 0 ? sala.agenda.map(m => `
