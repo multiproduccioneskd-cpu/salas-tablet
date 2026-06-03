@@ -10,6 +10,7 @@
         body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 5px solid #dda126; }
+        .header-left-block { display: flex; align-items: center; gap: 15px; }
         .header-logo { width: 50px; }
         .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; flex-grow: 1; height: calc(100vh - 90px); }
         
@@ -27,7 +28,7 @@
 </head>
 <body>
     <div class="main-header">
-        <div style="display:flex; align-items:center; gap:15px;">
+        <div class="header-left-block">
             <img src="logo-blanco-celeste.png" alt="Logo" class="header-logo">
             <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
         </div>
@@ -61,9 +62,8 @@
 
         function processSharepointData(items) {
             initSalas();
+            const hoy = new Date().toISOString().split('T')[0];
             const ahora = new Date();
-            // Comparar fecha local de Chile (ajustada -4h)
-            const hoy = new Date(ahora.getTime() - (4 * 60 * 60 * 1000)).toISOString().split('T')[0];
             const minActuales = (ahora.getHours() * 60 + ahora.getMinutes());
 
             items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
@@ -72,18 +72,15 @@
                 const f = item.fields || item;
                 if (!f) return;
 
-                // Ajustar evento a hora de Chile
-                const fechaOriginal = new Date(f.HoraInicio || f.Start || "");
-                const fechaAjustada = new Date(fechaOriginal.getTime() - (4 * 60 * 60 * 1000));
-                
-                if (fechaAjustada.toISOString().split('T')[0] !== hoy) return;
+                const fechaRaw = f.HoraInicio || f.Start || "";
+                if (fechaRaw.split('T')[0] !== hoy) return;
 
-                const horaStr = fechaAjustada.getHours().toString().padStart(2, '0') + ":" + fechaAjustada.getMinutes().toString().padStart(2, '0');
-                const inicioMinutos = fechaAjustada.getHours() * 60 + fechaAjustada.getMinutes();
+                const horaStr = fechaRaw.substring(11, 16);
+                const [h, m] = horaStr.split(':').map(Number);
+                const inicioMinutos = h * 60 + m;
                 const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 90));
 
                 let s = String(f.Sala || "").toLowerCase();
-                // Filtro ampliado para incluir cualquier variante de "Junta"
                 let k = (s.includes("junta") || s.includes("directiva") || s.includes("directorio")) ? "Sala Junta Directiva" : 
                         s.includes("sala 1") ? "Sala 1" : 
                         s.includes("sala 2") ? "Sala 2" : 
