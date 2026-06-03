@@ -3,67 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Visor de Reuniones UGM</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
-        body { background: #1b2a4a; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; }
+        body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; background-position: center; background-attachment: fixed; background-color: #f4f6f9; color: #333; min-height: 100vh; display: flex; flex-direction: column; padding: 20px; }
         
-        /* Contenedor principal con 2x2 fijo */
-        .rooms-grid { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            grid-template-rows: repeat(2, 1fr); 
-            gap: 20px; 
-            flex-grow: 1; 
-            height: 80vh; 
-        }
+        .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 15px 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-left: 5px solid #dda126; }
+        .header-left-block { display: flex; align-items: center; gap: 20px; }
+        .header-logo { width: 65px; height: auto; }
+        .date-badge { background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; text-align: right; }
+        .live-time { color: #52b3e5; display: block; font-size: 16px; }
         
-        .room-card { 
-            background: #f8f9fa; 
-            border: 2px solid #1b2a4a; 
-            border-radius: 8px; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
+        /* DISEÑO DE TARJETAS FIJAS */
+        .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; flex-grow: 1; }
+        .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; border-top: 5px solid #1b2a4a; height: 400px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        .room-title-bar { background: rgba(248, 249, 250, 0.8); padding: 15px 20px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; align-items: center; }
         
-        .room-title-bar { 
-            padding: 15px 20px; 
-            background: #fff; 
-            border-bottom: 2px solid #1b2a4a; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
+        /* SCROLL INTELIGENTE */
+        .meetings-list { padding: 15px 20px; flex-grow: 1; overflow-y: auto; }
+        .meeting-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #edf2f7; }
+        .time-box { background: #e2e8f0; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; min-width: 95px; text-align: center; }
+        .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; padding-left: 15px; }
         
-        .meetings-list { 
-            flex-grow: 1; 
-            overflow-y: auto; /* Scroll interno solo cuando haga falta */
-            padding: 10px 20px; 
-        }
-        
-        .meeting-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #dee2e6; }
-        .time-box { font-weight: bold; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-right: 15px; }
-        .meeting-title { font-weight: bold; font-size: 14px; }
+        /* BADGE PARPADEANTE */
+        .badge-en-curso { background: #d9534f; color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; animation: blink 1.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
+    <div class="main-header">
+        <div class="header-left-block">
+            <img src="logo-blanco-celeste.png" alt="Logo" class="header-logo">
+            <div><div style="font-size:22px; font-weight:bold;">Visor de Reuniones UGM</div></div>
+        </div>
+        <div class="date-badge">
+            <span id="liveDate">Cargando...</span>
+            <span id="liveTime" class="live-time">00:00:00</span>
+        </div>
+    </div>
+
     <div class="rooms-grid" id="roomsContainer"></div>
-    
+
     <script>
-        // ... (Tu lógica de processSharepointData y fetch se mantiene igual)
+        let salasMapeadas = {};
+
+        function initSalas() {
+            salasMapeadas = {
+                "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
+                "Sala 1": { displayName: "Sala 1", agenda: [] },
+                "Sala 2": { displayName: "Sala 2", agenda: [] },
+                "Sala 3": { displayName: "Sala 3", agenda: [] }
+            };
+        }
+
+        async function fetchSalasFromAPI() {
+            try {
+                const response = await fetch(`/api/salas?refresh=${Date.now()}`);
+                const data = await response.json();
+                if (data && data.value) processSharepointData(data.value);
+            } catch (e) { console.error("Error API:", e); }
+        }
+
+        function processSharepointData(items) {
+            initSalas();
+            const ahora = new Date();
+            const hoy = ahora.toISOString().split('T')[0];
+            const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+
+            // ORDENAMIENTO POR ID (Nuevos primero)
+            items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
+
+            items.forEach((item, index) => {
+                const f = item.fields || item;
+                if (!f) return;
+
+                // FILTRO DE HOY
+                const fechaEvento = (f.HoraInicio || f.Start || "").split('T')[0];
+                if (fechaEvento !== hoy) return;
+
+                const inicioStr = (f.HoraInicio || f.Start || "").substring(11, 16);
+                const [hI, mI] = inicioStr.split(':').map(Number);
+                const inicioMinutos = hI * 60 + mI;
+                
+                // Lógica En Curso: Desde inicio hasta 60 min después
+                const esEnCurso = (minutosActuales >= inicioMinutos && minutosActuales < (inicioMinutos + 60));
+
+                let salaRaw = String(f.Sala || "").toLowerCase();
+                let salaKey = salaRaw.includes("junta") ? "Sala Junta Directiva" : 
+                              salaRaw.includes("sala 1") ? "Sala 1" : 
+                              salaRaw.includes("sala 2") ? "Sala 2" : 
+                              salaRaw.includes("sala 3") ? "Sala 3" : "";
+
+                if (salaKey) {
+                    salasMapeadas[salaKey].agenda.push({ 
+                        title: (f.Asunto || f.Title || "Actividad").trim(), 
+                        startTime: inicioStr,
+                        esEnCurso: esEnCurso 
+                    });
+                }
+            });
+            renderDashboard();
+        }
 
         function renderDashboard() {
             const container = document.getElementById('roomsContainer');
             container.innerHTML = "";
-            const salas = ["Sala Junta Directiva", "Sala 1", "Sala 2", "Sala 3"];
-            
-            salas.forEach(key => {
-                const sala = salasMapeadas[key] || { agenda: [] };
+            Object.keys(salasMapeadas).forEach(key => {
+                const sala = salasMapeadas[key];
                 container.innerHTML += `
                     <div class="room-card">
                         <div class="room-title-bar">
-                            <span style="font-weight:bold; color:#1b2a4a; font-size:18px;">${key}</span>
+                            <span style="font-weight:bold; color:#1b2a4a; font-size:18px;">${sala.displayName}</span>
                             <span style="font-size:10px; background:#1b2a4a; color:white; padding:2px 8px; border-radius:10px;">
                                 ${sala.agenda.length > 0 ? sala.agenda.length + ' Eventos' : 'Disponible'}
                             </span>
@@ -73,11 +124,20 @@
                                 <div class="meeting-item">
                                     <span class="time-box">${m.startTime}</span>
                                     <div class="meeting-title">${m.title} ${m.esEnCurso ? '<span class="badge-en-curso">EN CURSO</span>' : ''}</div>
-                                </div>`).join('') : '<div style="margin-top:100px; text-align:center; color:#999;">No hay reuniones programadas para hoy.</div>'}
+                                </div>`).join('') : '<div style="text-align:center; color:#999; margin-top:80px;">No hay reuniones hoy.</div>'}
                         </div>
                     </div>`;
             });
         }
+
+        setInterval(() => {
+            const n = new Date();
+            document.getElementById('liveDate').innerText = n.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('liveTime').innerText = n.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        }, 1000);
+        
+        fetchSalasFromAPI();
+        setInterval(fetchSalasFromAPI, 15000);
     </script>
 </body>
 </html>
