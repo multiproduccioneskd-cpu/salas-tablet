@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Visor de Reuniones UGM</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
         body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 5px solid #dda126; }
+        .header-logo { width: 50px; }
         .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; flex-grow: 1; height: calc(100vh - 90px); }
         .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; border-top: 4px solid #1b2a4a; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
         .room-title-bar { padding: 10px 15px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; align-items: center; }
@@ -22,13 +22,17 @@
 </head>
 <body>
     <div class="main-header">
-        <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="logo-blanco-celeste.png" alt="Logo" class="header-logo">
+            <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
+        </div>
         <div style="text-align:right;"><span id="liveDate"></span><span id="liveTime" style="color:#52b3e5; display:block;"></span></div>
     </div>
     <div class="rooms-grid" id="roomsContainer"></div>
 
     <script>
         let salasMapeadas = {};
+
         function initSalas() {
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
@@ -48,39 +52,29 @@
 
         function processSharepointData(items) {
             initSalas();
-            const ahoraChile = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Santiago"}));
-            const hoy = ahoraChile.toISOString().split('T')[0];
-            const minActuales = (ahoraChile.getHours() * 60 + ahoraChile.getMinutes());
-
-            items.forEach((item) => {
+            items.forEach(item => {
                 const f = item.fields || item;
+                // Intentamos capturar la hora de cualquier campo posible
+                const rawDate = f.HoraInicio || f.Start || f.Fecha || "";
+                if (!rawDate) return;
+
+                const d = new Date(rawDate);
+                // Si la fecha es inválida, saltamos
+                if (isNaN(d.getTime())) return;
+
+                // Solo mostrar hoy (Chile)
+                const hoyStr = new Date().toLocaleDateString('es-CL');
+                if (d.toLocaleDateString('es-CL') !== hoyStr) return;
+
+                const horaStr = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
                 
-                // INTENTO DE LECTURA FLEXIBLE: Prueba ambos nombres posibles
-                const fechaRaw = f.HoraInicio || f.Hora_x0020_Inicio || f.Start || "";
-                if (!fechaRaw) return;
-
-                const fechaEvento = new Date(new Date(fechaRaw).toLocaleString("en-US", {timeZone: "America/Santiago"}));
-                if (fechaEvento.toISOString().split('T')[0] !== hoy) return;
-
-                // SALA FLEXIBLE: busca en el campo Sala, sin importar formato
                 let s = String(f.Sala || "").toLowerCase();
-                let k = (s.includes("junta") || s.includes("directiva")) ? "Sala Junta Directiva" : 
+                let k = s.includes("junta") ? "Sala Junta Directiva" : 
                         s.includes("sala 1") ? "Sala 1" : 
                         s.includes("sala 2") ? "Sala 2" : 
                         s.includes("sala 3") ? "Sala 3" : "";
 
-                if (k) {
-                    const hh = String(fechaEvento.getHours()).padStart(2, '0');
-                    const mm = String(fechaEvento.getMinutes()).padStart(2, '0');
-                    const inicioMinutos = fechaEvento.getHours() * 60 + fechaEvento.getMinutes();
-                    const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 90));
-                    
-                    salasMapeadas[k].agenda.push({ 
-                        title: (f.Asunto || f.Title || "Actividad").trim(), 
-                        startTime: `${hh}:${mm}`, 
-                        esEnCurso 
-                    });
-                }
+                if (k) salasMapeadas[k].agenda.push({ title: (f.Asunto || f.Title || "Actividad"), startTime: horaStr });
             });
             renderDashboard();
         }
@@ -89,12 +83,12 @@
             const container = document.getElementById('roomsContainer');
             container.innerHTML = "";
             Object.keys(salasMapeadas).forEach(key => {
-                const sala = salasMapeadas[key];
-                container.innerHTML += `<div class="room-card">
-                    <div class="room-title-bar"><span>${sala.displayName}</span><span>${sala.agenda.length > 0 ? sala.agenda.length + ' Eventos' : 'Disponible'}</span></div>
-                    <div class="meetings-list">${sala.agenda.length > 0 ? sala.agenda.map(m => `
-                        <div class="meeting-item"><span class="time-box">${m.startTime}</span><div class="meeting-title">${m.title} ${m.esEnCurso ? '<span class="badge-en-curso">EN CURSO</span>' : ''}</div></div>`).join('') : '<div style="text-align:center; color:#999; margin-top:50px;">Sin reuniones hoy.</div>'}
-                    </div></div>`;
+                const s = salasMapeadas[key];
+                container.innerHTML += `
+                    <div class="room-card">
+                        <div class="room-title-bar"><span>${s.displayName}</span><span>${s.agenda.length} Eventos</span></div>
+                        <div class="meetings-list">${s.agenda.map(m => `<div class="meeting-item"><span class="time-box">${m.startTime}</span><div class="meeting-title">${m.title}</div></div>`).join('')}</div>
+                    </div>`;
             });
         }
 
@@ -105,7 +99,7 @@
         }, 1000);
         
         fetchSalasFromAPI();
-        setInterval(fetchSalasFromAPI, 15000);
+        setInterval(fetchSalasFromAPI, 30000);
     </script>
 </body>
 </html>
