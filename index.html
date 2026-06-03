@@ -8,41 +8,27 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
         body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
         .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 5px solid #dda126; }
-        .header-left-block { display: flex; align-items: center; gap: 15px; }
-        .header-logo { width: 50px; }
         .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; flex-grow: 1; height: calc(100vh - 90px); }
-        
         .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; border-top: 4px solid #1b2a4a; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
         .room-title-bar { padding: 10px 15px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; align-items: center; }
         .meetings-list { flex-grow: 1; overflow-y: auto; padding: 5px 15px; }
-        
         .meeting-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
         .time-box { background: #e2e8f0; font-size: 10px; font-weight: bold; padding: 3px 6px; border-radius: 4px; min-width: 80px; text-align: center; }
         .meeting-title { font-size: 12px; font-weight: bold; color: #2d3748; padding-left: 10px; }
-        
         .badge-en-curso { background: #d9534f; color: white; font-size: 8px; padding: 1px 4px; border-radius: 4px; margin-left: 8px; animation: blink 1.5s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
     <div class="main-header">
-        <div class="header-left-block">
-            <img src="logo-blanco-celeste.png" alt="Logo" class="header-logo">
-            <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15); padding:5px 15px; border-radius:4px; font-size:12px; text-align:right;">
-            <span id="liveDate">Cargando...</span>
-            <span id="liveTime" style="color:#52b3e5; display:block; font-size:14px;">00:00:00</span>
-        </div>
+        <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
+        <div style="text-align:right;"><span id="liveDate"></span><span id="liveTime" style="color:#52b3e5; display:block;"></span></div>
     </div>
-
     <div class="rooms-grid" id="roomsContainer"></div>
 
     <script>
         let salasMapeadas = {};
-
         function initSalas() {
             salasMapeadas = {
                 "Sala Junta Directiva": { displayName: "Sala Junta Directiva", agenda: [] },
@@ -62,40 +48,39 @@
 
         function processSharepointData(items) {
             initSalas();
-            // Convertimos la hora actual a zona de Chile
             const ahoraChile = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Santiago"}));
             const hoy = ahoraChile.toISOString().split('T')[0];
             const minActuales = (ahoraChile.getHours() * 60 + ahoraChile.getMinutes());
 
-            items.sort((a, b) => (parseInt(b.fields?.id || b.id || 0) - parseInt(a.fields?.id || a.id || 0)));
-
             items.forEach((item) => {
                 const f = item.fields || item;
-                if (!f) return;
-
-                const fechaRaw = f.HoraInicio || f.Start || "";
+                
+                // INTENTO DE LECTURA FLEXIBLE: Prueba ambos nombres posibles
+                const fechaRaw = f.HoraInicio || f.Hora_x0020_Inicio || f.Start || "";
                 if (!fechaRaw) return;
 
-                // Ajustamos la fecha del evento a zona de Chile
                 const fechaEvento = new Date(new Date(fechaRaw).toLocaleString("en-US", {timeZone: "America/Santiago"}));
-                
-                // Filtramos por fecha actual
                 if (fechaEvento.toISOString().split('T')[0] !== hoy) return;
 
-                const hh = String(fechaEvento.getHours()).padStart(2, '0');
-                const mm = String(fechaEvento.getMinutes()).padStart(2, '0');
-                const horaStr = `${hh}:${mm}`;
-                
-                const inicioMinutos = fechaEvento.getHours() * 60 + fechaEvento.getMinutes();
-                const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 90));
-
+                // SALA FLEXIBLE: busca en el campo Sala, sin importar formato
                 let s = String(f.Sala || "").toLowerCase();
-                let k = (s.includes("junta") || s.includes("directiva") || s.includes("directorio")) ? "Sala Junta Directiva" : 
+                let k = (s.includes("junta") || s.includes("directiva")) ? "Sala Junta Directiva" : 
                         s.includes("sala 1") ? "Sala 1" : 
                         s.includes("sala 2") ? "Sala 2" : 
                         s.includes("sala 3") ? "Sala 3" : "";
 
-                if (k) salasMapeadas[k].agenda.push({ title: (f.Asunto || f.Title || "Actividad").trim(), startTime: horaStr, esEnCurso });
+                if (k) {
+                    const hh = String(fechaEvento.getHours()).padStart(2, '0');
+                    const mm = String(fechaEvento.getMinutes()).padStart(2, '0');
+                    const inicioMinutos = fechaEvento.getHours() * 60 + fechaEvento.getMinutes();
+                    const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 90));
+                    
+                    salasMapeadas[k].agenda.push({ 
+                        title: (f.Asunto || f.Title || "Actividad").trim(), 
+                        startTime: `${hh}:${mm}`, 
+                        esEnCurso 
+                    });
+                }
             });
             renderDashboard();
         }
@@ -105,28 +90,17 @@
             container.innerHTML = "";
             Object.keys(salasMapeadas).forEach(key => {
                 const sala = salasMapeadas[key];
-                container.innerHTML += `
-                    <div class="room-card">
-                        <div class="room-title-bar">
-                            <span style="font-weight:bold; color:#1b2a4a; font-size:15px;">${sala.displayName}</span>
-                            <span style="font-size:10px; background:#1b2a4a; color:white; padding:2px 8px; border-radius:10px;">
-                                ${sala.agenda.length > 0 ? sala.agenda.length + ' Eventos' : 'Disponible'}
-                            </span>
-                        </div>
-                        <div class="meetings-list">
-                            ${sala.agenda.length > 0 ? sala.agenda.map(m => `
-                                <div class="meeting-item">
-                                    <span class="time-box">${m.startTime}</span>
-                                    <div class="meeting-title">${m.title} ${m.esEnCurso ? '<span class="badge-en-curso">EN CURSO</span>' : ''}</div>
-                                </div>`).join('') : '<div style="text-align:center; color:#999; margin-top:50px;">Sin reuniones hoy.</div>'}
-                        </div>
-                    </div>`;
+                container.innerHTML += `<div class="room-card">
+                    <div class="room-title-bar"><span>${sala.displayName}</span><span>${sala.agenda.length > 0 ? sala.agenda.length + ' Eventos' : 'Disponible'}</span></div>
+                    <div class="meetings-list">${sala.agenda.length > 0 ? sala.agenda.map(m => `
+                        <div class="meeting-item"><span class="time-box">${m.startTime}</span><div class="meeting-title">${m.title} ${m.esEnCurso ? '<span class="badge-en-curso">EN CURSO</span>' : ''}</div></div>`).join('') : '<div style="text-align:center; color:#999; margin-top:50px;">Sin reuniones hoy.</div>'}
+                    </div></div>`;
             });
         }
 
         setInterval(() => {
             const n = new Date();
-            document.getElementById('liveDate').innerText = n.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('liveDate').innerText = n.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
             document.getElementById('liveTime').innerText = n.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         }, 1000);
         
