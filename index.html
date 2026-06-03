@@ -70,16 +70,33 @@
             items.forEach(item => {
                 const f = item.fields || item;
                 if (!f.HoraInicio) return;
+                
+                // Convertir fecha de SharePoint a objeto Date local
                 const d = new Date(f.HoraInicio);
-                if (d.toLocaleDateString('es-CL') !== hoyStr) return;
+                const fechaEventoStr = d.toLocaleDateString('es-CL');
+
+                // Si no es hoy, lo registramos en consola para depurar
+                if (fechaEventoStr !== hoyStr) {
+                    console.log(`Evento "${f.Title}" descartado: fecha ${fechaEventoStr} no es hoy (${hoyStr})`);
+                    return;
+                }
 
                 const inicioMinutos = d.getHours() * 60 + d.getMinutes();
                 const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 60));
                 
                 let s = String(f.Sala || "").toLowerCase();
-                let key = s.includes("junta") ? "Sala Junta Directiva" : s.includes("sala 1") ? "Sala 1" : s.includes("sala 2") ? "Sala 2" : s.includes("sala 3") ? "Sala 3" : null;
+                let key = s.includes("junta") ? "Sala Junta Directiva" : 
+                          s.includes("sala 1") ? "Sala 1" : 
+                          s.includes("sala 2") ? "Sala 2" : 
+                          s.includes("sala 3") ? "Sala 3" : null;
 
-                if (key) salas[key].push({ title: f.Title || f.Asunto || "Actividad", startTime: `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`, esEnCurso });
+                if (key) {
+                    salas[key].push({ 
+                        title: f.Title || f.Asunto || "Actividad", 
+                        startTime: `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`, 
+                        esEnCurso 
+                    });
+                }
             });
             return salas;
         }
