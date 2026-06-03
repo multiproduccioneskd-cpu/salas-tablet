@@ -37,11 +37,25 @@ export default async function handler(req, res) {
             }
         });
         
-        const graphData = await graphResponse.json();
+       // ... línea 40
+const graphData = await graphResponse.json();
 
-        // Responder al frontend
-        return res.status(200).json(graphData);
+// --- INSERTA ESTO AQUÍ ---
+if (graphData.value && Array.isArray(graphData.value)) {
+    graphData.value = graphData.value.map(item => {
+        if (item.fields?.FechaReserva) { // Cambia 'FechaReserva' por el nombre real de tu campo
+            item.fields.FechaReserva = new Date(item.fields.FechaReserva).toLocaleString('es-CL', { 
+                timeZone: 'America/Santiago',
+                hour12: false 
+            });
+        }
+        return item;
+    });
+}
+// -------------------------
 
+// Responder al frontend
+return res.status(200).json(graphData);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
