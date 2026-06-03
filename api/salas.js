@@ -1,4 +1,4 @@
-// api/salas.js - Backend intermediario seguro para ocultar credenciales
+// api/salas.js - Backend actualizado
 export default async function handler(req, res) {
     // Permitir llamadas desde tu propio dominio frontend
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const LIST_ID = "c546cdce-816e-4b01-9484-1e41902ee91a";
 
     try {
-        // 1. Obtener Token de Acceso desde Microsoft Azure
+        // 1. Obtener Token de Acceso
         const tokenResponse = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -26,20 +26,30 @@ export default async function handler(req, res) {
         const tokenData = await tokenResponse.json();
         const TOKEN = tokenData.access_token;
 
-        if (!TOKEN) throw new Error("No se pudo generar el token de Graph API");
+        if (!TOKEN) throw new Error("No se pudo generar el token de Graph API: " + JSON.stringify(tokenData));
 
-        // 2. Consultar los elementos de Sharepoint ordenados por fecha
-       const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$orderby=createdDateTime desc&$top=100`, {
+        // 2. Consultar los elementos de Sharepoint
+        // Se añade 'Prefer' para forzar la lectura de elementos no indexados aún
+        const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$orderby=createdDateTime desc&$top=100`, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${TOKEN}` }
+            headers: { 
+                'Authorization': `Bearer ${TOKEN}`,
+                'Prefer': 'HonorNonIndexedQueries' 
+            }
         });
         
+        if (!graphResponse.ok) {
+            const errorData = await graphResponse.text();
+            throw new Error(`Graph API error ${graphResponse.status}: ${errorData}`);
+        }
+
         const graphData = await graphResponse.json();
 
-        // 3. Responder los datos puros al frontend
+        // 3. Responder los datos al frontend
         return res.status(200).json(graphData);
 
     } catch (error) {
+        console.error("Error en /api/salas:", error.message);
         return res.status(500).json({ error: error.message });
     }
 }
