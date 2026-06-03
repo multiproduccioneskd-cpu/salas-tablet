@@ -6,35 +6,47 @@
     <title>Visor de Reuniones UGM</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; }
-        body { background-image: url('FONDO PANTALLA REUNIÓN ALUMNI.png'); background-size: cover; background-position: center; background-attachment: fixed; background-color: #f4f6f9; min-height: 100vh; display: flex; flex-direction: column; padding: 20px; }
-        .main-header { background: rgba(27, 42, 74, 0.95); color: #ffffff; padding: 15px 30px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-left: 5px solid #dda126; }
-        .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; flex-grow: 1; }
-        .room-card { background: rgba(255, 255, 255, 0.94); border-radius: 8px; border-top: 5px solid #1b2a4a; height: 400px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-        .room-title-bar { background: rgba(248, 249, 250, 0.8); padding: 15px 20px; border-bottom: 1px solid #eef2f5; display: flex; justify-content: space-between; align-items: center; }
-        .meetings-list { padding: 15px 20px; flex-grow: 1; overflow-y: auto; scroll-behavior: smooth; }
-        .meeting-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #edf2f7; }
-        .time-box { background: #e2e8f0; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; min-width: 60px; text-align: center; }
-        .meeting-title { font-size: 14px; font-weight: bold; color: #2d3748; padding-left: 15px; }
-        .badge-en-curso { background: #d9534f; color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 10px; animation: blink 1.5s infinite; }
+        body { background: #f4f6f9; min-height: 100vh; display: flex; flex-direction: column; padding: 10px; overflow: hidden; }
+        
+        .main-header { background: #1b2a4a; color: #ffffff; padding: 8px 20px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .header-logo { height: 40px; width: auto; } /* Logo controlado */
+        
+        .rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex-grow: 1; }
+        .room-card { background: #fff; border-radius: 6px; border-top: 4px solid #1b2a4a; height: 350px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .room-title-bar { padding: 8px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
+        .meetings-list { padding: 5px 15px; flex-grow: 1; overflow-y: auto; }
+        .meeting-item { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; }
+        .time-box { background: #e2e8f0; font-size: 10px; padding: 2px 6px; border-radius: 4px; min-width: 50px; text-align: center; }
+        .meeting-title { font-size: 12px; font-weight: bold; color: #333; padding-left: 10px; }
+        
+        .badge-disponible { background: #52b3e5; color: white; font-size: 9px; padding: 2px 8px; border-radius: 10px; }
+        .badge-eventos { background: #1b2a4a; color: white; font-size: 9px; padding: 2px 8px; border-radius: 10px; }
+        .badge-en-curso { background: #d9534f; color: white; font-size: 8px; padding: 1px 5px; border-radius: 4px; margin-left: 8px; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
     <div class="main-header">
-        <div style="font-size:22px; font-weight:bold;">Visor de Reuniones UGM</div>
-        <div style="text-align:right; font-weight:bold;"><span id="liveDate"></span><span id="liveTime" style="color:#52b3e5; display:block;"></span></div>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <img src="logo-blanco-celeste.png" alt="Logo" class="header-logo">
+            <div style="font-size:18px; font-weight:bold;">Visor de Reuniones UGM</div>
+        </div>
+        <div style="text-align:right; font-size:12px;">
+            <span id="liveDate"></span>
+            <span id="liveTime" style="color:#52b3e5; display:block; font-size:14px;"></span>
+        </div>
     </div>
     <div class="rooms-grid" id="roomsContainer"></div>
 
     <script>
-        // Función para obtener hora en Chile
         const getChileanDate = () => new Date(new Date().toLocaleString("en-US", {timeZone: "America/Santiago"}));
 
         async function fetchSalasFromAPI() {
             try {
                 const response = await fetch(`/api/salas?refresh=${Date.now()}`);
                 const data = await response.json();
-                processSharepointData(data.value || []);
+                renderDashboard(processSharepointData(data.value || []));
             } catch (e) { console.error("Error API:", e); }
         }
 
@@ -42,64 +54,48 @@
             const ahora = getChileanDate();
             const hoyStr = ahora.toLocaleDateString('es-CL');
             const minActuales = ahora.getHours() * 60 + ahora.getMinutes();
-
-            const salas = {
-                "Sala Junta Directiva": [], "Sala 1": [], "Sala 2": [], "Sala 3": []
-            };
+            const salas = { "Sala Junta Directiva": [], "Sala 1": [], "Sala 2": [], "Sala 3": [] };
 
             items.forEach(item => {
                 const f = item.fields || item;
                 if (!f.HoraInicio) return;
-
                 const d = new Date(f.HoraInicio);
                 if (d.toLocaleDateString('es-CL') !== hoyStr) return;
 
-                const h = d.getHours();
-                const m = d.getMinutes();
-                const inicioMinutos = h * 60 + m;
-                
-                // Lógica de "En Curso": Inició hace poco o está por iniciar (rango 60 min)
+                const inicioMinutos = d.getHours() * 60 + d.getMinutes();
                 const esEnCurso = (minActuales >= inicioMinutos && minActuales < (inicioMinutos + 60));
-
+                
                 let s = String(f.Sala || "").toLowerCase();
-                let key = s.includes("junta") ? "Sala Junta Directiva" : 
-                          s.includes("sala 1") ? "Sala 1" : 
-                          s.includes("sala 2") ? "Sala 2" : 
-                          s.includes("sala 3") ? "Sala 3" : null;
+                let key = s.includes("junta") ? "Sala Junta Directiva" : s.includes("sala 1") ? "Sala 1" : s.includes("sala 2") ? "Sala 2" : s.includes("sala 3") ? "Sala 3" : null;
 
-                if (key) salas[key].push({ title: f.Title || f.Asunto || "Actividad", startTime: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, esEnCurso });
+                if (key) salas[key].push({ title: f.Title || f.Asunto || "Actividad", startTime: `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`, esEnCurso });
             });
-
-            renderDashboard(salas);
+            return salas;
         }
 
         function renderDashboard(salas) {
             const container = document.getElementById('roomsContainer');
             container.innerHTML = Object.keys(salas).map(key => `
                 <div class="room-card">
-                    <div class="room-title-bar"><strong>${key}</strong><span>${salas[key].length} Eventos</span></div>
-                    <div class="meetings-list" id="list-${key.replace(/\s+/g, '')}">
-                        ${salas[key].map(m => `
+                    <div class="room-title-bar">
+                        <strong>${key}</strong>
+                        <span class="${salas[key].length > 0 ? 'badge-eventos' : 'badge-disponible'}">
+                            ${salas[key].length > 0 ? salas[key].length + ' Eventos' : 'Disponible'}
+                        </span>
+                    </div>
+                    <div class="meetings-list">
+                        ${salas[key].length > 0 ? salas[key].map(m => `
                             <div class="meeting-item"><span class="time-box">${m.startTime}</span>
                             <div class="meeting-title">${m.title} ${m.esEnCurso ? '<span class="badge-en-curso">EN CURSO</span>' : ''}</div></div>
-                        `).join('')}
+                        `).join('') : '<div style="text-align:center; color:#999; margin-top:100px; font-size:12px;">Sin reuniones hoy</div>'}
                     </div>
                 </div>`).join('');
         }
 
-        // Reloj y Autoscroll
         setInterval(() => {
             const n = getChileanDate();
             document.getElementById('liveDate').innerText = n.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
             document.getElementById('liveTime').innerText = n.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-            
-            // Autoscroll suave
-            document.querySelectorAll('.meetings-list').forEach(list => {
-                if (list.scrollHeight > list.clientHeight) {
-                    list.scrollTop += 1;
-                    if (list.scrollTop >= (list.scrollHeight - list.clientHeight)) list.scrollTop = 0;
-                }
-            });
         }, 1000);
         
         fetchSalasFromAPI();
