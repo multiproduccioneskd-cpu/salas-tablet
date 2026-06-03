@@ -26,22 +26,31 @@ export default async function handler(req, res) {
 
         if (!TOKEN) throw new Error("No se pudo generar el token de Graph API");
 
+        // Solicitud ampliada: añadimos IdType=ImmutableId para evitar pérdida de datos
         const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$top=100`, {
             method: 'GET',
             headers: { 
                 'Authorization': `Bearer ${TOKEN}`,
-                'Prefer': 'HonorNonIndexedQueries' 
+                'Prefer': 'HonorNonIndexedQueries, IdType=ImmutableId' 
             }
         });
         
         const graphData = await graphResponse.json();
 
+        // LOG DE DIAGNÓSTICO (Revisa esto en los logs de tu servidor/Vercel)
+        console.log("DEBUG API - Elementos recibidos:", graphData.value ? graphData.value.length : 0);
+        if (graphData.value && graphData.value.length > 0) {
+            console.log("DEBUG API - Ejemplo de un campo:", JSON.stringify(graphData.value[0].fields));
+        }
+
         // Procesamiento de fechas a hora local de Chile
         if (graphData.value && Array.isArray(graphData.value)) {
             graphData.value = graphData.value.map(item => {
-                // ASEGÚRATE de que 'FechaReserva' coincida con el nombre real de tu columna en SharePoint
-                if (item.fields?.FechaReserva) { 
-                    item.fields.FechaReserva = new Date(item.fields.FechaReserva).toLocaleString('es-CL', { 
+                // Aquí normalizamos las fechas. Si tu campo es 'HoraInicio', asegúrate de que exista en 'fields'
+                const fechaCampo = item.fields?.HoraInicio || item.fields?.Start || item.fields?.FechaReserva;
+                
+                if (fechaCampo) { 
+                    item.fields.FechaFormateada = new Date(fechaCampo).toLocaleString('es-CL', { 
                         timeZone: 'America/Santiago',
                         hour12: false 
                     });
@@ -54,6 +63,7 @@ export default async function handler(req, res) {
         return res.status(200).json(graphData);
 
     } catch (error) {
+        console.error("Error en API:", error);
         return res.status(500).json({ error: error.message });
     }
 }
