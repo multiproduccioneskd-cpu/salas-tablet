@@ -26,9 +26,6 @@ export default async function handler(req, res) {
 
         if (!TOKEN) throw new Error("No se pudo generar el token de Graph API");
 
-        // CAMBIO AQUÍ: Eliminamos el orderby para que SharePoint entregue 
-        // los elementos tal como los tiene, sin intentar indexar por fecha.
-        // Añadimos 'Prefer: HonorNonIndexedQueries' para obligar a que traiga lo último.
         const graphResponse = await fetch(`https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${LIST_ID}/items?expand=fields&$top=100`, {
             method: 'GET',
             headers: { 
@@ -37,25 +34,25 @@ export default async function handler(req, res) {
             }
         });
         
-       // ... línea 40
-const graphData = await graphResponse.json();
+        const graphData = await graphResponse.json();
 
-// --- INSERTA ESTO AQUÍ ---
-if (graphData.value && Array.isArray(graphData.value)) {
-    graphData.value = graphData.value.map(item => {
-        if (item.fields?.FechaReserva) { // Cambia 'FechaReserva' por el nombre real de tu campo
-            item.fields.FechaReserva = new Date(item.fields.FechaReserva).toLocaleString('es-CL', { 
-                timeZone: 'America/Santiago',
-                hour12: false 
+        // Procesamiento de fechas a hora local de Chile
+        if (graphData.value && Array.isArray(graphData.value)) {
+            graphData.value = graphData.value.map(item => {
+                // ASEGÚRATE de que 'FechaReserva' coincida con el nombre real de tu columna en SharePoint
+                if (item.fields?.FechaReserva) { 
+                    item.fields.FechaReserva = new Date(item.fields.FechaReserva).toLocaleString('es-CL', { 
+                        timeZone: 'America/Santiago',
+                        hour12: false 
+                    });
+                }
+                return item;
             });
         }
-        return item;
-    });
-}
-// -------------------------
 
-// Responder al frontend
-return res.status(200).json(graphData);
+        // Responder al frontend
+        return res.status(200).json(graphData);
+
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
